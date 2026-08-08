@@ -65,7 +65,9 @@
     position: fixed; inset: 0; z-index: 15; border-radius: 0;
     background: rgba(255,250,252,.88);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 10px; text-align: center; padding: 20px; backdrop-filter: blur(2px);
+    gap: 8px; text-align: center; backdrop-filter: blur(2px);
+    padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
   #overlay.hidden { display: none; }
   /* けっか画面は うすく：うしろの ばんめんが よく見えるように */
@@ -172,13 +174,12 @@
     box-shadow: 0 6px 16px rgba(190,150,170,.32);
   }
   #toast .sub { display: block; font-size: 10px; color: #a58e83; font-weight: 400; margin-top: 1px; }
-  #chain { width: 100%; max-width: 430px; }
+  #chain { width: 100%; max-width: 430px; margin: 2px 0; }
   #chain canvas { width: 100%; height: auto; display: block; }
   #foot { font-size: 11px; color: #a58e83; text-align: center; line-height: 1.6; }
 
   /* せまい画面では ゲーム画面を ゆうせん */
   @media (max-height: 900px){
-    #foot { display: none; }
     .card .val { font-size: clamp(20px, 6.6vw, 28px); }
     .card .lbl { font-size: 10px; }
     .card { padding: 3px 5px; }
@@ -187,8 +188,11 @@
     #wrap { gap: 4px; }
   }
   @media (max-height: 780px){
-    #chain { display: none; }
     .card .sub { display: none; }
+    #overlay .lead { font-size: 13px; line-height: 1.7; }
+    #overlay h1 { font-size: 25px; }
+    #titleCv { max-width: 220px; }
+    #foot { font-size: 10px; }
   }
   /* iPhone SE など たてが みじかい 機種 */
   @media (max-height: 700px){
@@ -275,13 +279,15 @@
         つづけて くっつくほど <b>高とくてん</b>。<br>
         上のラインを こえないように！
       </p>
+      <div id="chain"><canvas id="chainCv"></canvas></div>
+      <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ ひよこ ×2 は なかよく かけていく<br>
+  <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
       <button class="btn" id="startBtn">はじめる</button>
       <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
       <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
     </div>
   </div>
 
-  <div id="chain"><canvas id="chainCv"></canvas></div>
 
   <div id="save" class="hidden">
     <div class="box">
@@ -298,8 +304,6 @@
       <p class="msg" id="saveMsg"></p>
     </div>
   </div>
-  <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ ひよこ ×2 は なかよく かけていく<br>
-  <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
 </div>
 
 <script>
@@ -383,6 +387,7 @@ let chainScore = 0;                  // れんさで もらった てん
 function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
 function scoreNow(){ return runBest + chainScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
+let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
 const RISE_GLOW_T = 0.9;
 const OVER_GRACE = 3;                // ラインを こえてからの ゆうよ（びょう）
@@ -2769,6 +2774,7 @@ function bindTitleButtons(){
   const cb = document.getElementById("codeBtn");
   if (cb) cb.addEventListener("click", openSave);
   initTitleArt();
+  initChainBar();
 }
 
 /* タイトルへ もどる */
@@ -2874,15 +2880,18 @@ window.addEventListener("keydown", e => {
 /* ============================================================
    しんかの図（下のバー）
    ============================================================ */
-const chainCv2 = document.getElementById("chainCv");
-const bctx = chainCv2.getContext("2d");
-(function initChainBar(){
+function initChainBar(){
+  const c = document.getElementById("chainCv");
+  if (!c){ bctx = null; return; }
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  chainCv2.width = 430*dpr; chainCv2.height = 92*dpr;
+  c.width = 430*dpr; c.height = 92*dpr;
+  bctx = c.getContext("2d");
   bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-})();
+  renderChainBar(0);
+}
 
 function renderChainBar(su){
+  if (!bctx) return;
   su = su || 0;
   const g = bctx;
   const W = 430, H = 92, GY = 66;          // GY = じめんの高さ
@@ -2971,7 +2980,6 @@ function renderChainBar(su){
     }
   }
 }
-renderChainBar(0);
 
 /* ============================================================
    ループ
