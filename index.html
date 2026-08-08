@@ -282,8 +282,8 @@ const TIERS = [
   { name:"ひよこ",   r:14, body:"#FFE889", shade:"#FBD25B", line:"#DDAE33", ear:"tuft",  earIn:"#FBD25B", face:"chick",  sm:"beak",   eye:"sparkle", acc:"note",    fluff:11, amp:.036 },
 ];
 const LAST = TIERS.length - 1;
-// おとせるのは ひよこ いがいの ぜんキャラ（大きい子ほど よく出る）
-const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4, 5];   // ひよこ いがい ぜんぶ
+// おとせるのは しろくま〜ねこ（大きい子ほど よく出る）
+const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // うさぎ と ひよこ は 合体でしか 生まれない
 
 /* ============================================================
    ばめん
@@ -2648,14 +2648,30 @@ saveDlg.addEventListener("pointerdown", e => { if (e.target === saveDlg) closeSa
 /* タイトルの え（なかまが ならんで まってる） */
 const TAW = 282, TAH = 118, TGY = 100;
 let tctx = null;
-const TITLE_CAST = [
-  { t:5, x: 40,  r:20, ph:0.0 },
-  { t:0, x:120,  r:34, ph:1.3 },
-  { t:2, x:190,  r:25, ph:2.4 },
-  { t:4, x:236,  r:17, ph:3.6 },
-  { t:6, x:266,  r:13, ph:5.0 },
+/* ならぶ いちと 大きさ（だれが 立つかは まいかい ランダム） */
+const TITLE_SLOTS = [
+  { x: 40,  r:20, ph:0.0 },
+  { x:120,  r:34, ph:1.3 },
+  { x:190,  r:25, ph:2.4 },
+  { x:236,  r:17, ph:3.6 },
+  { x:266,  r:13, ph:5.0 },
 ];
+let TITLE_CAST = [];
+function rollTitleCast(){
+  const idx = TIERS.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--){          // シャッフル
+    const j = (Math.random() * (i + 1)) | 0;
+    const t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+  }
+  const flip = Math.random() < .5;                    // ときどき 左右を いれかえ
+  TITLE_CAST = TITLE_SLOTS.map((s, i) => {
+    const pad = s.r * 1.2 + 3;                        // みみが 画面の外に 出ないように
+    const x = Math.max(pad, Math.min(TAW - pad, flip ? TAW - s.x : s.x));
+    return { t: idx[i], x, r: s.r, ph: s.ph + rnd(0, 1.6) };
+  });
+}
 function initTitleArt(){
+  rollTitleCast();                                    // まいかい ちがう なかまが 出る
   const c = document.getElementById("titleCv");
   if (!c){ tctx = null; return; }
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
