@@ -1,6 +1,6 @@
 /* ちいさくなあれ — オフライン用 Service Worker */
-const VERSION = "v2";
-const CACHE = "chiisaku-naare-" + VERSION;
+const VERSION = "v3";
+const CACHE = "mamemaru-" + VERSION;
 const ASSETS = [
   "./",
   "./index.html",
