@@ -49,6 +49,7 @@
   }
   .card .lbl { font-size: 12px; letter-spacing: .06em; color: #a58e83; }
   .card .val { font-size: clamp(24px, 8vw, 34px); font-weight: 700; line-height: 1.05; color: #7a6154; }
+  .card .sub { font-size: 10px; color: #a58e83; line-height: 1.2; margin-top: -1px; }
   #hud .card { min-width: 0; }
   .card.hi .val { color: #f2789a; }
   #stage { position: relative; }
@@ -89,6 +90,7 @@
     box-shadow: 0 2px 0 rgba(200,160,100,.25);
   }
   #overlay.result .ms-got { font-size: 13px; font-weight: 700; color: #d9a23c; }
+  #overlay.result .calc { font-size: 12px; color: #a58e83; margin-top: -3px; }
   #overlay h1 { margin: 0; font-size: 30px; color: #f2789a; letter-spacing: .04em; }
   #overlay .sub2 { margin: -4px 0 2px; font-size: 12px; color: #d99ab4; letter-spacing: .1em; }
   #overlay p { margin: 0; font-size: 13px; line-height: 1.8; color: #8b7568; }
@@ -107,6 +109,34 @@
   }
   button.btn.sub:active { box-shadow: 0 1px 0 #d9c3cd; }
   button.btn.tiny { font-size: 11px; padding: 7px 16px; box-shadow: 0 3px 0 #d9c3cd; }
+  button.link {
+    background: none; border: none; font-family: inherit;
+    font-size: 11px; color: #b79aa8; text-decoration: underline; cursor: pointer; padding: 4px;
+  }
+  #overlay .lead { font-size: 15px; line-height: 1.9; }
+  #titleCv { width: 100%; max-width: 282px; height: auto; display: block; margin: -2px 0 -4px; }
+  #overlay .howto { font-size: 11px; color: #a58e83; }
+  textarea { -webkit-user-select: text; user-select: text; }
+  #save {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(120,95,110,.45); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #save.hidden { display: none; }
+  #save .box {
+    background: #fffafc; border: 3px solid #ffdfec; border-radius: 20px;
+    padding: 16px 16px 14px; max-width: 340px; width: 100%;
+    box-shadow: 0 12px 30px rgba(150,110,130,.35);
+    display: flex; flex-direction: column; gap: 7px; text-align: center;
+  }
+  #save h2 { margin: 0; font-size: 16px; color: #f2789a; }
+  #save p { margin: 0; font-size: 11px; line-height: 1.6; color: #8b7568; }
+  #save textarea {
+    width: 100%; font-family: monospace; font-size: 12px; resize: none;
+    border: 2px solid #ffdfec; border-radius: 10px; padding: 7px; color: #6b5548;
+    background: #fff;
+  }
+  #save .msg { min-height: 15px; font-weight: 700; color: #45a35f; }
   #missions { width: 100%; max-width: 430px; display: flex; gap: 6px; }
   .ms {
     flex: 1; background: rgba(255,255,255,.72); border: 2px solid #fff;
@@ -127,11 +157,11 @@
     100% { transform: scale(1); background: rgba(255,255,255,.72); }
   }
   #toast {
-    position: absolute; left: 0; right: 0; top: 34%; text-align: center;
-    pointer-events: none; opacity: 0; transform: translateY(6px);
+    position: absolute; left: 0; right: 0; bottom: 7%; text-align: center;
+    pointer-events: none; opacity: 0; transform: translateY(10px);
     transition: opacity .25s, transform .25s; z-index: 4;
   }
-  #toast.show { opacity: 1; transform: translateY(-8px); }
+  #toast.show { opacity: 1; transform: translateY(0); }
   #toast .in {
     display: inline-block; background: rgba(255,255,255,.95);
     border: 3px solid #ffd0e2; border-radius: 999px; padding: 7px 20px;
@@ -177,7 +207,8 @@
 <div id="wrap">
   <div id="hud">
     <div class="card"><div class="lbl">いま</div><div class="val" id="cur">0</div></div>
-    <div class="card hi"><div class="lbl">さいこう記録</div><div class="val" id="best">0</div></div>
+    <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div>
+      <div class="sub" id="best">さいこう 0</div></div>
     <div class="card keep" id="keepCard"><div class="lbl k">あずける</div><canvas id="keepCv"></canvas></div>
     <div class="card next"><div class="lbl">つぎ</div><canvas id="nextCv"></canvas></div>
     <button id="sound" title="おと">🔊</button>
@@ -201,28 +232,37 @@
     <div id="overlay">
       <h1>まめまる</h1>
       <p class="sub2">〜 くっつくと ちいさくなる 〜</p>
-      <p>
-        おなじ子どうしがくっつくと<b>ちいさく</b>なるよ。<br>
-        いちばん小さい ひよこ ×2 は なかよく <b>かけていく</b>。<br>
-        ときどき下から <b>せりあがって</b>くるし、<br>
-        じかんが たつほど どんどん <b>はやくなる</b>！<br>
-        まよってると <b>かってに おちちゃう</b>よ。<br>
-        <b>あずける</b>で 1ぴき キープできる。<br>
-        つづけて 4かい 合体＝<b>れんさ</b>で せりあがりが おそくなるよ。<br>
-        <b>上のラインをこえないように</b><br>
-        なんびきまで あつめられるかな？<br>
-        上の <b>おだい</b> をクリアすると ⭐がもらえて、<br>
-        せりあがりが すこし おそくなるよ。
+      <canvas id="titleCv"></canvas>
+      <p class="lead">
+        おなじ子が くっつくと <b>ちいさく</b> なる。<br>
+        つづけて くっつくほど <b>高とくてん</b>。<br>
+        上のラインを こえないように！
       </p>
       <button class="btn" id="startBtn">はじめる</button>
-      <button class="btn sub tiny" id="codeBtn">きろくの ひきつぎ</button>
-      <p style="font-size:11px">マウス／ゆびで よこ移動、クリックで おとす<br>（←→キー と スペースでもOK）</p>
+      <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
+      <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
     </div>
   </div>
 
   <div id="chain"><canvas id="chainCv"></canvas></div>
+
+  <div id="save" class="hidden">
+    <div class="box">
+      <h2>きろくを ほぞん・よみこみ</h2>
+      <p>この もじれつが あなたの きろくです。<br>コピーして とっておくと、ほかの きたいでも つづきから あそべます。</p>
+      <textarea id="saveCode" rows="2" readonly></textarea>
+      <button class="btn tiny" id="copyBtn">コピーする</button>
+      <p>もらった もじれつを ここに はって よみこみます</p>
+      <textarea id="loadCode" rows="2" placeholder="ここに はりつけ"></textarea>
+      <div class="btnrow" style="justify-content:center">
+        <button class="btn tiny" id="loadBtn">よみこむ</button>
+        <button class="btn sub tiny" id="closeSave">とじる</button>
+      </div>
+      <p class="msg" id="saveMsg"></p>
+    </div>
+  </div>
   <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ ひよこ ×2 は なかよく かけていく<br>
-  <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>4れんさ</b>から せりあがりが おそくなり、<b>6れんさ</b>で はやさが Lv.1つ もどる</div>
+  <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
 </div>
 
 <script>
@@ -263,7 +303,7 @@ function fitCanvas(){
   // まわりの UI の じっさいの 高さを はかって、のこりに キャンバスを おさめる
   let used = 0;
   for (const el2 of wrapEl.children){
-    if (el2.id === "stage") continue;
+    if (el2.id === "stage" || el2.id === "save") continue;   // かさねて出すものは かぞえない
     used += el2.getBoundingClientRect().height + 6;
   }
   const cs = getComputedStyle(wrapEl);
@@ -302,9 +342,15 @@ let overTimer = 0;
 let elapsed = 0, level = 1, riseT = 0, riseSpan = 1, rises = 0;
 let holdT = 99, holdSpan = 99, tickAt = -1, msTick = 0;
 let chain = 0, chainT = 0, chainBest = 0, chainFx = null, chainX = 0, chainY = 0;
+let chainScore = 0;                  // れんさで もらった てん
+function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
+function scoreNow(){ return runBest + chainScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
 const RISE_GLOW_T = 0.9;
+const OVER_GRACE = 3;                // ラインを こえてからの ゆうよ（びょう）
+let overCount = OVER_GRACE, safeT = 0, tickSec = -1;
+let dangerBall = null;          // いま ラインを こえている 子
 let keepTier = -1, keepUsed = false;
 let uiShockT = 0, uiShockDur = 1, uiShockWait = 0, uiShockQ = 0, uiShockDirty = false;
 function uiSurp(){
@@ -335,7 +381,7 @@ let riseBonusUsed = 0;
 
 /* レベル（じかんでだんだん はやくなる） */
 const RISE_ROW = [0, 1, 2];          // せり上がってくる子（大きい子たち）
-const RISE_STEP = 13;                // 1回ごとに ゆかが上がる量（もどらない）
+const RISE_STEP = 14;                // 1回ごとに ゆかが上がる量（もどらない）
 const LV_SEC = 39;                 // このびょう数で Lv が 1つ あがる
 const LV_BACK_MIN = 6;             // これいじょうの れんさで Lv が もどる
 const LV_BACK_COOL = 60;           // つぎに もどせるまでの まち時間
@@ -355,7 +401,8 @@ let missions = [], stamps = 0, runBest = 0;
 let bestEver = 0, stampTotal = 0, plays = 0;
 try {
   const s = JSON.parse(localStorage.getItem("fuwamoko-drop") || "{}");
-  bestEver = s.best || 0; stampTotal = s.stamps || 0; plays = s.plays || 0;
+  const n0 = x => { const n = Math.floor(Number(x)); return (isFinite(n) && n >= 0) ? Math.min(n, 999999) : 0; };
+  bestEver = n0(s.best); stampTotal = n0(s.stamps); plays = n0(s.plays);
 } catch(e){}
 function saveRec(){
   try {
@@ -366,11 +413,11 @@ function saveRec(){
 
 const MISSION_DEFS = [
   () => { const n = Math.max(pick([22,26,30,34]), cur + 5);   // いまより ふやす
-          return { id:"collect", need:n, prog:0, text:`どうぶつを ${n}ひき あつめる` }; },
+          return { id:"collect", need:n, prog:0, text:`どうぶつを ${n}にん あつめる` }; },
   () => { const n = pick([5,7,9]);
           return { id:"pop", need:n, prog:0, text:`ひよこを ${n}かい みおくる` }; },
   () => { const k = 3 + ((Math.random()*3)|0), n = pick([8,11,14]);
-          return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}ひき つくる` }; },
+          return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}にん つくる` }; },
   () => { const n = pick([30,40,50]);
           return { id:"drop", need:n, prog:0, text:`${n}かい おとす` }; },
   () => { const n = pick([50,70,90]);
@@ -378,7 +425,7 @@ const MISSION_DEFS = [
   () => { let nb = 0;
           for (const b of balls) if (b.tier === 0) nb++;
           const n = Math.max(pick([4,5]), nb + 1);              // いまより ふやす
-          return { id:"bear", need:n, prog:0, text:`しろくまを ${n}ひき ならべる` }; },
+          return { id:"bear", need:n, prog:0, text:`しろくまを ${n}にん ならべる` }; },
   () => { const n = pick([2,3]);
           return { id:"chain", need:n, prog:0, text:`4れんさ いじょうを ${n}かい だす` }; },
 ];
@@ -460,6 +507,7 @@ function raiseMission(id, v){
 }
 
 const elCur = document.getElementById("cur");
+const elScore = document.getElementById("score");
 const elBest = document.getElementById("best");
 const elDrops = document.getElementById("drops");
 const overlay = document.getElementById("overlay");
@@ -562,13 +610,14 @@ function reset(){
   cur = 0; drops = 0; pops = 0; overTimer = 0; dropLock = 0; shake = 0;
   elapsed = 0; level = 1; rises = 0;
   chain = 0; chainT = 0; chainBest = 0; chainFx = null; riseBonusUsed = 0;
-  overBall = null; riseGlow = 0;
+  overBall = null; riseGlow = 0; dangerBall = null;
+  overCount = OVER_GRACE; safeT = 0; tickSec = -1;
   levelAdj = 0; lvBackCool = 0; lvBackLeft = LV_BACK_MAX;
   nextRow = makeRow();
   keepTier = -1; keepUsed = false;
   keepCard.classList.remove("used", "ready");
   floorY = FLOOR0;
-  runBest = 0;
+  runBest = 0; chainScore = 0;
   if (bestEver > best) best = bestEver;
   resetMissions();
   pickTheme();           // まいかい ちがう けしき
@@ -698,7 +747,8 @@ function updateRiseBar(){
 
 function updateHUD(){
   elCur.textContent = cur;
-  elBest.textContent = best;
+  elScore.textContent = scoreNow();
+  elBest.textContent = "さいこう " + Math.max(best, bestEver);
   if (elDrops) elDrops.textContent = drops;
 }
 
@@ -925,12 +975,12 @@ function chainFinale(n, x, y){
   if (sec >= .5){
     riseBonusUsed += sec;
     riseT = Math.min(riseSpan, riseT + sec);        // ためこめるのは 1かいぶん まで
-    bonus = "せりあがり +" + sec.toFixed(1) + "びょう";
+    bonus = "+" + chainPts(n) + "てん ／ せりあがり +" + sec.toFixed(1) + "びょう";
   } else if (n >= 6){
     stamps++;                                        // じかんが もらえない ぶんは ⭐に
-    bonus = "⭐ ボーナス！";
+    bonus = "+" + chainPts(n) + "てん ／ ⭐ボーナス！";
   } else {
-    bonus = "ごほうび まんタン！";
+    bonus = "+" + chainPts(n) + "てん！";
   }
   // 6れんさ いじょうで はやさが ひとつ まえに もどる
   if (n >= LV_BACK_MIN && level > 1 && lvBackCool <= 0 && lvBackLeft > 0){
@@ -947,7 +997,7 @@ function chainFinale(n, x, y){
   }
   if (n >= 8){
     floorY = Math.min(FLOOR0, floorY + RISE_STEP);
-    bonus = "ゆかが さがった！";
+    bonus = "+" + chainPts(n) + "てん ／ ゆかが さがった！";
     for (let i = 0; i < 14; i++)
       fx.push({ t:"p", x: rnd(WALL_L, WALL_R), y: floorY - rnd(0, 26),
                 vx: rnd(-90,90), vy: rnd(-260,-90), r: rnd(3,7),
@@ -955,7 +1005,12 @@ function chainFinale(n, x, y){
   }
   updateRiseBar();
 
-  chainFx = { n, age: 0, life: 1.7, live: false, bonus };
+  const pts = chainPts(n);
+  chainScore += pts;
+  if (scoreNow() > best) best = scoreNow();
+  updateHUD();
+
+  chainFx = { n, age: 0, life: 1.7, live: false, bonus, pts };
 
   for (let i = 0; i < 24 + n*6; i++){
     const a = Math.random()*Math.PI*2, sp = rnd(160, 640)*pw;
@@ -1827,7 +1882,7 @@ function draw(){
   drawBackground();
 
   // 上限ライン
-  const pulse = .55 + .45*Math.sin(time*3.4);
+  const pulse = .55 + .45*Math.sin(time*(overCount < OVER_GRACE ? 9 : 3.4));
   ctx.save();
   ctx.setLineDash([9,7]);
   ctx.lineWidth = 3;
@@ -1989,11 +2044,13 @@ function draw(){
   }
 
   drawOverMark();
+  drawCountdown();
   drawChainText();
 
   ctx.restore();
   drawNext();
   drawKeep();
+  drawTitleArt();
   if (uiShockT > 0 || uiShockWait > 0){
     drawRisePreview();
     renderChainBar(uiSurp());
@@ -2044,6 +2101,81 @@ function drawRiseGlow(){
   ctx.restore();
 }
 
+/* ラインを こえている あいだの カウントダウン */
+function drawCountdown(){
+  if (state !== "play" || overCount >= OVER_GRACE) return;
+  const t = Math.max(0, overCount);
+  const p = t / OVER_GRACE;
+  const cx = CW/2, cy = DANGER + 92, R = 40;
+  const pulse = .5 + .5*Math.sin(time*11);
+  const urgent = t <= 2;
+
+  ctx.save();
+  // うしろの まる
+  ctx.fillStyle = "rgba(255,255,255,.92)";
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  ctx.strokeStyle = `rgba(255,120,150,${.35 + .3*pulse})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+
+  // へっていく わ
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255,205,218,.9)"; ctx.lineWidth = 7;
+  ctx.beginPath(); ctx.arc(cx, cy, R - 6, 0, 7); ctx.stroke();
+  ctx.strokeStyle = urgent ? `rgba(255,40,80,${.75 + .25*pulse})` : "#FF6E92";
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 6, -Math.PI/2, -Math.PI/2 + Math.PI*2*p);
+  ctx.stroke();
+
+  // すうじ（1びょう ごとに ぽん と 大きく）
+  const n = Math.max(1, Math.ceil(t));
+  const grow = 1 + .22 * Math.max(0, 1 - (Math.ceil(t) - t) * 5);
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(grow, grow);
+  ctx.font = 'bold 38px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineJoin = "round"; ctx.lineWidth = 8; ctx.strokeStyle = "#ffffff";
+  ctx.strokeText(n, 0, 3);
+  ctx.fillStyle = urgent ? "#FF1F52" : "#FF4D77";
+  ctx.fillText(n, 0, 3);
+  ctx.restore();
+
+  ctx.restore();
+
+  // 「あぶない！」は こえている子の すぐ よこに
+  const w = dangerBall;
+  if (!w) return;
+  ctx.save();
+  ctx.font = 'bold 14px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const tw = ctx.measureText("あぶない！").width;
+  const pw = tw + 16, ph = 21;
+  const side = w.x < CW/2 ? 1 : -1;                       // ひろい方に よせる
+  let lx = w.x + side * (w.r + 10 + pw/2);
+  lx = Math.max(pw/2 + 6, Math.min(CW - pw/2 - 6, lx));
+  const ly = Math.max(ph/2 + 6, w.y - w.r*.15);
+
+  // まるい印
+  ctx.strokeStyle = `rgba(255,45,85,${.55 + .45*pulse})`;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath(); ctx.arc(w.x, w.y, w.r + 6, 0, 7); ctx.stroke();
+  // つなぎ線
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(lx - side*pw/2, ly);
+  ctx.lineTo(w.x + side*(w.r + 3), ly);
+  ctx.stroke();
+  // ふきだし
+  ctx.fillStyle = "rgba(255,255,255,.96)";
+  roundRect(ctx, lx - pw/2, ly - ph/2, pw, ph, ph/2); ctx.fill();
+  ctx.strokeStyle = `rgba(255,45,85,${.7 + .3*pulse})`; ctx.lineWidth = 2.5;
+  roundRect(ctx, lx - pw/2, ly - ph/2, pw, ph, ph/2); ctx.stroke();
+  ctx.fillStyle = "#FF2D55";
+  ctx.fillText("あぶない！", lx, ly + 1);
+  ctx.restore();
+}
+
 /* ゲームオーバー：こえた子を いちばん手前で 指ししめす */
 function drawOverMark(){
   if (state !== "over") return;
@@ -2059,7 +2191,7 @@ function drawOverMark(){
   ctx.strokeStyle = col; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.arc(worst.x, worst.y, worst.r + 7, 0, 7); ctx.stroke();
 
-  const txt = "ここが こえちゃった！";
+  const txt = "こえちゃった！";
   ctx.font = 'bold 12px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
   const pw = ctx.measureText(txt).width + 20, ph = 24;
   const upper = worst.y - worst.r - 20;
@@ -2103,7 +2235,7 @@ function drawChainText(){
 
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.translate(CW/2, DANGER + 128);
+  ctx.translate(CW/2, DANGER + 252);
   ctx.rotate(Math.sin(chainFx.age*11) * .05);
   ctx.scale(pop, pop);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -2286,7 +2418,7 @@ function update(dt){
   if (c !== cur){
     cur = c;
     if (cur > runBest) runBest = cur;
-    if (cur > best) best = cur;
+    if (scoreNow() > best) best = scoreNow();
     updateHUD();
   }
 
@@ -2351,17 +2483,38 @@ function update(dt){
     }
   }
 
-  // 上限ラインはんてい
-  let danger = false;
+  // 上限ライン：こえたら OVER_GRACE びょうの ゆうよ
+  let danger = false, worst = null;
   for (const b of balls){
     const sp = Math.hypot(b.vx, b.vy);
-    if (b.y - b.r < DANGER && b.age > .8 && sp < 70){
-      b.danger += dt;
+    if (b.y - b.r < DANGER && b.age > .8 && sp < 300){
+      b.danger = Math.min(1.6, b.danger + dt*2);
       danger = true;
+      if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
     } else {
       b.danger = Math.max(0, b.danger - dt*2);
     }
-    if (b.danger > 1.4){ overBall = b; gameOver(); return; }
+  }
+  dangerBall = danger ? worst : null;
+  if (danger){
+    safeT = 0;
+    overCount -= dt;
+    const sec = Math.max(0, Math.ceil(overCount));
+    if (sec !== tickSec){
+      tickSec = sec;
+      if (sec > 0) beep(560 + (OVER_GRACE - sec)*90, .11, "square", .1);
+    }
+    if (overCount <= 0){
+      overBall = worst;
+      gameOver();
+      return;
+    }
+  } else {
+    safeT += dt;
+    if (safeT > .6 && overCount < OVER_GRACE){
+      overCount = OVER_GRACE; tickSec = -1;
+      if (safeT < .8) beep(1046, .14, "sine", .07);   // セーフの あいず
+    }
   }
   overTimer = danger ? overTimer + dt : 0;
 }
@@ -2372,6 +2525,14 @@ function clampX(x, r){
 
 function drop(){
   if (state !== "play" || !held) return;
+
+  // つぎを 落とした しゅんかん、いまの れんさは そこで おしまい。
+  // 「1回の落下が ひきおこした 連続合体」だけを れんさと かぞえる
+  if (chain > 0){
+    if (chain >= CHAIN_MIN) chainFinale(chain, chainX, chainY);
+    chain = 0; chainT = 0;
+  }
+
   const b = held;
   b.x = clampX(aimX, b.r);
   b.vy = 60;
@@ -2392,22 +2553,24 @@ function gameOver(){
   for (let i = 0; i < 3; i++){
     setTimeout(() => beep(420 - i*90, .22, "sawtooth", .07), i*130);
   }
-  const isRec = runBest > bestEver;
-  if (isRec) bestEver = runBest;
+  const sc = scoreNow();
+  const isRec = sc > bestEver;
+  if (isRec) bestEver = sc;
   stampTotal += stamps;
   plays++;
   saveRec();
   if (isRec) setTimeout(() => { [784,988,1175,1568].forEach((f,i) =>
     setTimeout(() => beep(f, .2, "triangle", .12), i*90)); }, 420);
 
-  const next = nextGoal(runBest);
+  const next = nextGoal(sc);
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
   overlay.innerHTML = `
     <div class="panel">
       <h1>${isRec ? "あたらしい記録！ 🎉" : "もう いっぱい…"}</h1>
-      <div class="big">${runBest} <span style="font-size:16px">ひき</span></div>
-      <p class="rank">${rankOf(runBest)}</p>
+      <div class="big">${sc} <span style="font-size:16px">てん</span></div>
+      <p class="calc">あつめた ${runBest} ＋ れんさ ${chainScore}</p>
+      <p class="rank">${rankOf(sc)}</p>
       <p>つぎの目標：${next}</p>
       <p class="ms-got">⭐ おだい ${stamps} こ たっせい</p>
       <div class="btnrow">
@@ -2419,31 +2582,140 @@ function gameOver(){
   document.getElementById("quitBtn").addEventListener("click", showTitle);
 }
 
-/* きろくの ひきつぎ（iOSは しばらく あそばないと 消えることが あるため） */
-function transferCode(){
-  const mine = btoa(unescape(encodeURIComponent(JSON.stringify(
+/* きろくを ほぞん・よみこみ */
+const saveDlg  = document.getElementById("save");
+const saveCode = document.getElementById("saveCode");
+const loadCode = document.getElementById("loadCode");
+const saveMsg  = document.getElementById("saveMsg");
+
+function myCode(){
+  return btoa(unescape(encodeURIComponent(JSON.stringify(
     { b: bestEver, s: stampTotal, p: plays }))));
-  const v = prompt(
-    "いまの きろくコードです。コピーして とっておいてね。\n" +
-    "べつのコードを はりつけて OK すると よみこみます。", mine);
-  if (!v || v.trim() === mine) return;
-  try {
-    const o = JSON.parse(decodeURIComponent(escape(atob(v.trim()))));
-    bestEver   = Math.max(bestEver,   o.b | 0);
-    stampTotal = Math.max(stampTotal, o.s | 0);
-    plays      = Math.max(plays,      o.p | 0);
-    if (bestEver > best) best = bestEver;
-    saveRec(); updateHUD();
-    alert("よみこみました！\nさいこう記録 " + bestEver + "ひき ／ ⭐" + stampTotal);
-  } catch(e){
-    alert("コードが ちがうみたい…");
+}
+function openSave(){
+  saveCode.value = myCode();
+  loadCode.value = "";
+  saveMsg.textContent = "";
+  saveDlg.classList.remove("hidden");
+}
+function closeSave(){ saveDlg.classList.add("hidden"); }
+
+function copyCode(){
+  const v = saveCode.value;
+  const done = () => { saveMsg.textContent = "コピーしました！"; };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(v).then(done).catch(fallback);
+  } else fallback();
+  function fallback(){
+    saveCode.focus();
+    saveCode.setSelectionRange(0, v.length);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){}
+    saveMsg.textContent = ok ? "コピーしました！" : "ながおしして コピーしてね";
   }
 }
+/* かならず 0以上の 整数に する（なにが きても こわれないように） */
+function safeNum(x){
+  const n = Math.floor(Number(x));
+  if (!isFinite(n) || n < 0) return 0;
+  return Math.min(n, 999999);
+}
+function loadFromCode(){
+  const v = (loadCode.value || "").trim();
+  if (!v){ saveMsg.textContent = "もじれつを はりつけてね"; return; }
+  if (v.length > 400){ saveMsg.textContent = "もじれつが ながすぎます"; return; }
+  if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.textContent = "もじれつが ちがうみたい…"; return; }
+  try {
+    const o = JSON.parse(decodeURIComponent(escape(atob(v))));
+    if (!o || typeof o !== "object" || Array.isArray(o)) throw 0;
+    if (typeof o.b !== "number") throw 0;
+    bestEver   = Math.max(bestEver,   safeNum(o.b));
+    stampTotal = Math.max(stampTotal, safeNum(o.s));
+    plays      = Math.max(plays,      safeNum(o.p));
+    if (bestEver > best) best = bestEver;
+    saveRec(); updateHUD();
+    saveCode.value = myCode();
+    saveMsg.textContent = "よみこみました！ さいこう " + bestEver + "てん";
+  } catch(e){
+    saveMsg.textContent = "もじれつが ちがうみたい…";
+  }
+}
+document.getElementById("copyBtn").addEventListener("click", copyCode);
+document.getElementById("loadBtn").addEventListener("click", loadFromCode);
+document.getElementById("closeSave").addEventListener("click", closeSave);
+saveDlg.addEventListener("pointerdown", e => { if (e.target === saveDlg) closeSave(); });
+
+/* タイトルの え（なかまが ならんで まってる） */
+const TAW = 282, TAH = 118, TGY = 100;
+let tctx = null;
+const TITLE_CAST = [
+  { t:5, x: 40,  r:20, ph:0.0 },
+  { t:0, x:120,  r:34, ph:1.3 },
+  { t:2, x:190,  r:25, ph:2.4 },
+  { t:4, x:236,  r:17, ph:3.6 },
+  { t:6, x:266,  r:13, ph:5.0 },
+];
+function initTitleArt(){
+  const c = document.getElementById("titleCv");
+  if (!c){ tctx = null; return; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  c.width = TAW*dpr; c.height = TAH*dpr;
+  tctx = c.getContext("2d");
+  tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function drawTitleArt(){
+  if (!tctx || state !== "title") return;
+  const g = tctx;
+  g.clearRect(0, 0, TAW, TAH);
+
+  // じめん
+  g.fillStyle = "#ffe2ee";
+  g.fillRect(0, TGY, TAW, TAH - TGY);
+  g.fillStyle = "#ffd2e4";
+  for (let x = 0; x < TAW; x += 13){
+    g.beginPath(); g.arc(x + 6.5, TGY + 1, 6.5, Math.PI, 0); g.fill();
+  }
+
+  // ふわふわ かざり
+  for (let i = 0; i < 5; i++){
+    const px = 24 + i*58 + Math.sin(time*.8 + i)*7;
+    const py = 26 + Math.sin(time*1.1 + i*2)*9;
+    g.globalAlpha = .5 + .3*Math.sin(time*1.6 + i);
+    if (i % 2){ g.fillStyle = "#ffc0d6"; drawHeart(g, px, py, 6); }
+    else { g.fillStyle = "#fff0b0"; g.save(); g.translate(px, py);
+           g.beginPath();
+           for (let j = 0; j < 10; j++){
+             const a = -Math.PI/2 + j*Math.PI/5, rr = (j%2) ? 2.2 : 5.5;
+             const qx = Math.cos(a)*rr, qy = Math.sin(a)*rr;
+             if (j) g.lineTo(qx, qy); else g.moveTo(qx, qy);
+           }
+           g.closePath(); g.fill(); g.restore(); }
+    g.globalAlpha = 1;
+  }
+
+  // なかまたち
+  for (const c of TITLE_CAST){
+    const s = Math.sin(time*.75 + c.ph);
+    const sm = s > .72 ? Math.min(1, (s - .72)/.12) : 0;         // ときどき わらう
+    const bs = Math.sin(time*1.9 + c.ph*3.1);
+    const bl = (!sm && bs > .965) ? .05 : 1;                      // ときどき まばたき
+    const bob = Math.sin(time*1.4 + c.ph*1.7) * 1.6;
+    g.save();
+    g.globalAlpha = .1; g.fillStyle = "#8a5f70";
+    g.beginPath(); g.ellipse(c.x, TGY + 1, c.r*.8, c.r*.18, 0, 0, 7); g.fill();
+    g.globalAlpha = 1;
+    g.translate(c.x, TGY - c.r + bob);
+    drawCreature(g, c.t, c.r, c.ph + time*.4, bl, 0, sm, 0, 1);
+    g.restore();
+  }
+}
+
 function bindTitleButtons(){
   const sb = document.getElementById("startBtn");
   if (sb) sb.addEventListener("click", start);
   const cb = document.getElementById("codeBtn");
-  if (cb) cb.addEventListener("click", transferCode);
+  if (cb) cb.addEventListener("click", openSave);
+  initTitleArt();
 }
 
 /* タイトルへ もどる */
@@ -2460,19 +2732,19 @@ function showTitle(){
 }
 
 /* 称号と つぎの目標 */
-const RANK_STEPS = [10, 15, 20, 25, 30, 35, 40, 50, 60, 75, 100];
-const RANK_TITLES = { 10:"まめまる みならい", 15:"まめまる しゅぎょうちゅう", 20:"まめまる つかい",
-                      25:"まめまる じょうず", 30:"まめまる たつじん", 35:"まめまる せんせい",
-                      40:"まめまる はかせ", 50:"まめまる マスター", 60:"まめまる おう",
-                      75:"でんせつの まめまる", 100:"まめまる かみさま" };
+const RANK_STEPS = [20, 30, 40, 55, 70, 90, 110, 140, 180, 240, 300];
+const RANK_TITLES = { 20:"まめまる みならい", 30:"まめまる しゅぎょうちゅう", 40:"まめまる つかい",
+                      55:"まめまる じょうず", 70:"まめまる たつじん", 90:"まめまる せんせい",
+                      110:"まめまる はかせ", 140:"まめまる マスター", 180:"まめまる おう",
+                      240:"でんせつの まめまる", 300:"まめまる かみさま" };
 function rankOf(n){
   let got = null;
   for (const s of RANK_STEPS) if (n >= s) got = s;
   return got ? RANK_TITLES[got] : "まめまる はじめました";
 }
 function nextGoal(n){
-  const goal = RANK_STEPS.find(s => s > n) || (n + 25);
-  return `${goal}ひき（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
+  const goal = RANK_STEPS.find(s => s > n) || (n + 60);
+  return `${goal}てん（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
 }
 
 
@@ -2498,7 +2770,14 @@ function pointerX(e){
 cv.addEventListener("pointermove", e => { aimX = pointerX(e); });
 cv.addEventListener("pointerdown", e => { aimX = pointerX(e); });
 cv.addEventListener("pointerup", e => { aimX = pointerX(e); drop(); });
+/* もじを うっている あいだ／ダイアログが 出ている あいだは ゲームに ながさない */
+function typingNow(e){
+  const t = e && e.target;
+  if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable)) return true;
+  return !saveDlg.classList.contains("hidden");
+}
 window.addEventListener("keydown", e => {
+  if (typingNow(e)) return;
   if (e.key === "ArrowLeft")  { aimX -= 22; e.preventDefault(); }
   if (e.key === "ArrowRight") { aimX += 22; e.preventDefault(); }
   if (e.key === "ArrowDown" || e.key === "Shift" || e.key === "h" || e.key === "H"){
