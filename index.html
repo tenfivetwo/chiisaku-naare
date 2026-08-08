@@ -294,6 +294,7 @@ let overTimer = 0;
 let elapsed = 0, level = 1, riseT = 0, riseSpan = 1, rises = 0;
 let holdT = 99, holdSpan = 99, tickAt = -1, msTick = 0;
 let chain = 0, chainT = 0, chainBest = 0, chainFx = null, chainX = 0, chainY = 0;
+let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let keepTier = -1, keepUsed = false;
 let uiShockT = 0, uiShockDur = 1, uiShockWait = 0, uiShockQ = 0, uiShockDirty = false;
 function uiSurp(){
@@ -541,6 +542,7 @@ function reset(){
   cur = 0; drops = 0; pops = 0; overTimer = 0; dropLock = 0; shake = 0;
   elapsed = 0; level = 1; rises = 0;
   chain = 0; chainT = 0; chainBest = 0; chainFx = null; riseBonusUsed = 0;
+  overBall = null;
   levelAdj = 0; lvBackCool = 0; lvBackLeft = LV_BACK_MAX;
   nextRow = makeRow();
   keepTier = -1; keepUsed = false;
@@ -1806,16 +1808,31 @@ function draw(){
     ctx.strokeStyle = `rgba(255,60,100,${.75 + .25*bl})`;
     ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(WALL_L, DANGER); ctx.lineTo(WALL_R, DANGER); ctx.stroke();
-    let worst = null;
-    for (const b of balls) if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
+    let worst = overBall && balls.includes(overBall) ? overBall : null;
+    if (!worst) for (const b of balls) if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
     if (worst && worst.y - worst.r < DANGER){
       ctx.strokeStyle = `rgba(255,60,100,${.8*bl + .2})`;
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(worst.x, worst.y, worst.r + 7, 0, 7); ctx.stroke();
-      ctx.fillStyle = "rgba(255,60,100,.95)";
+
+      // ふきだしは 画面の 内がわに おさめる（上が せまければ 下に出す）
+      const above = worst.y - worst.r - 16;
+      const ly = above > 70 ? above : worst.y + worst.r + 24;
+      const lx = Math.max(76, Math.min(CW - 76, worst.x));
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("ここが こえちゃった！", worst.x, worst.y - worst.r - 14);
+      ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,.95)";
+      ctx.lineJoin = "round";
+      ctx.strokeText("ここが こえちゃった！", lx, ly);
+      ctx.fillStyle = "rgba(255,60,100,.95)";
+      ctx.fillText("ここが こえちゃった！", lx, ly);
+      // ゆびさし
+      ctx.strokeStyle = `rgba(255,60,100,${.8*bl + .2})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly + (above > 70 ? 5 : -13));
+      ctx.lineTo(worst.x, worst.y + (above > 70 ? -worst.r - 9 : worst.r + 9));
+      ctx.stroke();
       ctx.textAlign = "start";
     }
     ctx.restore();
@@ -2224,7 +2241,7 @@ function update(dt){
     } else {
       b.danger = Math.max(0, b.danger - dt*2);
     }
-    if (b.danger > 1.4){ gameOver(); return; }
+    if (b.danger > 1.4){ overBall = b; gameOver(); return; }
   }
   overTimer = danger ? overTimer + dt : 0;
 }
