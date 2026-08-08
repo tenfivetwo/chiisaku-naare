@@ -37,6 +37,8 @@
              calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
   }
   button, canvas { touch-action: manipulation; }
+  button { white-space: nowrap; }
+  #wrap { overflow: hidden; }
   #hud {
     width: 100%; max-width: 430px;
     display: flex; align-items: stretch; gap: 6px;
@@ -59,7 +61,7 @@
     max-width: 100%; max-height: 100%;
   }
   #overlay {
-    position: absolute; inset: 0; border-radius: 20px;
+    position: fixed; inset: 0; z-index: 15; border-radius: 0;
     background: rgba(255,250,252,.88);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 10px; text-align: center; padding: 20px; backdrop-filter: blur(2px);
@@ -70,7 +72,7 @@
     background: rgba(150,120,140,.10);
     backdrop-filter: none;
     justify-content: flex-end;
-    padding: 12px 12px 18px;
+    padding: 12px 12px calc(18px + env(safe-area-inset-bottom));
   }
   #overlay.result .panel {
     background: rgba(255,252,253,.94);
@@ -91,9 +93,9 @@
   }
   #overlay.result .ms-got { font-size: 13px; font-weight: 700; color: #d9a23c; }
   #overlay.result .calc { font-size: 12px; color: #a58e83; margin-top: -3px; }
-  #overlay h1 { margin: 0; font-size: 30px; color: #f2789a; letter-spacing: .04em; }
+  #overlay h1 { margin: 0; font-size: 30px; color: #f2789a; letter-spacing: .04em; white-space: nowrap; }
   #overlay .sub2 { margin: -4px 0 2px; font-size: 12px; color: #d99ab4; letter-spacing: .1em; }
-  #overlay p { margin: 0; font-size: 13px; line-height: 1.8; color: #8b7568; }
+  #overlay p { margin: 0; font-size: 13px; line-height: 1.8; color: #8b7568; max-width: 340px; }
   #overlay .big { font-size: 44px; font-weight: 700; color: #f2789a; line-height: 1; }
   button.btn {
     font-family: inherit; font-size: 16px; font-weight: 700; color: #fff;
@@ -172,6 +174,40 @@
   #chain { width: 100%; max-width: 430px; }
   #chain canvas { width: 100%; height: auto; display: block; }
   #foot { font-size: 11px; color: #a58e83; text-align: center; line-height: 1.6; }
+
+  /* せまい画面では ゲーム画面を ゆうせん */
+  @media (max-height: 900px){
+    #foot { display: none; }
+    .card .val { font-size: clamp(20px, 6.6vw, 28px); }
+    .card .lbl { font-size: 10px; }
+    .card { padding: 3px 5px; }
+    .ms .mt { font-size: 12px; height: 32px; }
+    .ms { padding: 4px 7px 5px; }
+    #wrap { gap: 4px; }
+  }
+  @media (max-height: 780px){
+    #chain { display: none; }
+    .card .sub { display: none; }
+  }
+  /* iPhone SE など たてが みじかい 機種 */
+  @media (max-height: 700px){
+    #wrap { gap: 3px; padding-top: calc(3px + env(safe-area-inset-top)); }
+    .card .val { font-size: 22px; }
+    .card .lbl { font-size: 9px; letter-spacing: 0; }
+    .card { padding: 2px 4px; border-width: 2px; }
+    .card.next, .card.keep { flex: 0 0 58px; }
+    .card.next canvas, .card.keep canvas { height: 26px; }
+    #risebar { padding: 2px 7px; }
+    #risebar .rl, #risebar .rv { font-size: 10px; }
+    #risebar .rp { flex: 0 0 84px; width: 84px; height: 21px; }
+    .ms { padding: 3px 7px 4px; border-radius: 11px; }
+    .ms .mt {
+      font-size: 11px; height: 15px; line-height: 15px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ms .mb { height: 5px; margin-top: 2px; }
+    #sound { flex: 0 0 38px; font-size: 15px; }
+  }
   .card.next, .card.keep { flex: 0 0 68px; padding: 4px 4px 3px; }
   .card.next canvas, .card.keep canvas { width: 100%; height: 34px; display: block; }
   .card.keep { cursor: pointer; border-color: #ffe3ef; }
@@ -312,7 +348,7 @@ function fitCanvas(){
   const availH = Math.max(120, wrapEl.clientHeight - used - padV - 4);
   const availW = Math.max(120, wrapEl.clientWidth - padH);
   let scale = Math.min(availW / CW, availH / CH, 1.1);
-  scale = Math.max(scale, .3);
+  scale = Math.max(scale, .18);          // はみ出さないよう 下げきる
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   cv.width = CW * dpr; cv.height = CH * dpr;
   cv.style.width = (CW * scale) + "px";
