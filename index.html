@@ -384,8 +384,12 @@ let elapsed = 0, level = 1, riseT = 0, riseSpan = 1, rises = 0;
 let holdT = 99, holdSpan = 99, tickAt = -1, msTick = 0;
 let chain = 0, chainT = 0, chainBest = 0, chainFx = null, chainX = 0, chainY = 0;
 let chainScore = 0;                  // れんさで もらった てん
+let clearScore = 0;                  // おそうじで もらった てん
+let clearFx = null, clears = 0;
+const SPARKLE_RATE = 1 / 60;         // うさぎ・ひよこが ひかって 生まれる かくりつ
+const SPARKLE_TIER = 5;              // これ いこうの 子が ひかる（うさぎ・ひよこ）
 function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
-function scoreNow(){ return runBest + chainScore; }
+function scoreNow(){ return runBest + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
@@ -568,7 +572,7 @@ function newBall(tier, x, y, vx, vy){
     ang: rnd(-.2,.2), va: 0,
     dead:false, age:0, born:time,
     blink: rnd(1.5, 6), blinkT: 0,
-    smileT: 0, smileDur: 1, smileNext: rnd(4, 13),
+    smileT: 0, smileDur: 1, smileNext: rnd(4, 13), sparkle: false,
     surpT: 0, surpDur: 1, surpWait: 0, surpQ: 0, surpKind: 1, surpKindQ: 1,
     sq: 0, sqv: 0,
     phase: rnd(0, Math.PI*2),
@@ -652,14 +656,14 @@ function reset(){
   cur = 0; drops = 0; pops = 0; overTimer = 0; dropLock = 0; shake = 0;
   elapsed = 0; level = 1; rises = 0;
   chain = 0; chainT = 0; chainBest = 0; chainFx = null; riseBonusUsed = 0;
-  overBall = null; riseGlow = 0; dangerBall = null;
+  overBall = null; riseGlow = 0; dangerBall = null; clearedNow = false;
   overCount = OVER_GRACE; safeT = 0; tickSec = -1;
   levelAdj = 0; lvBackCool = 0; lvBackLeft = LV_BACK_MAX;
   nextRow = makeRow();
   keepTier = -1; keepUsed = false;
   keepCard.classList.remove("used", "ready");
   floorY = FLOOR0;
-  runBest = 0; chainScore = 0;
+  runBest = 0; chainScore = 0; clearScore = 0; clears = 0; clearFx = null;
   if (bestEver > best) best = bestEver;
   resetMissions();
   pickTheme();           // まいかい ちがう けしき
@@ -881,6 +885,7 @@ function step(dt){
     if (mergeQueue.length){
       for (const m of mergeQueue) doMerge(m[0], m[1]);
       for (const b of balls) b.merging = false;
+      clearedNow = false;
     }
   }
 }
@@ -1087,8 +1092,11 @@ function chainFinale(n, x, y){
   if (n >= 6) setTimeout(() => beep(base*4, .32, "sine", .075), 330);
 }
 
+let clearedNow = false;              // おそうじ直後の フレームは 合体を うけつけない
 function doMerge(a, b){
+  if (clearedNow) return;
   if (a.dead || b.dead) return;
+  const boom = a.sparkle || b.sparkle;          // かたほうでも ひかっていれば おそうじ
   a.dead = true; b.dead = true;
   const mx = (a.x + b.x)/2, my = (a.y + b.y)/2;
   const t = a.tier;
@@ -1100,6 +1108,7 @@ function doMerge(a, b){
     popFx(mx, my);
     bumpMission("pop");
     addChain(mx, my);
+    if (boom) clearAll(mx, my);
     return;
   }
 
@@ -1109,6 +1118,8 @@ function doMerge(a, b){
   balls.push(nb);
   bumpMission("make", t+1);
   addChain(mx, my);
+  if (t + 1 >= SPARKLE_TIER && Math.random() < SPARKLE_RATE) makeSparkle(nb);
+  if (boom) clearAll(mx, my);
   burst(mx, my, col.body, 14, 1);
   ring(mx, my, a.r*2.1, col.shade);
   shake = Math.max(shake, 3);
@@ -1130,6 +1141,64 @@ function ring(x, y, r, color){
 }
 function heart(x, y){
   fx.push({ t:"h", x, y, vy:-46, life:.9, age:0 });
+}
+
+/* にじいろに ひかる子が 生まれた */
+function makeSparkle(b){
+  b.sparkle = true;
+  makeSmile(b, 2.2);
+  shake = Math.max(shake, 5);
+  for (let i = 0; i < 22; i++){
+    const a = Math.random()*Math.PI*2, sp = rnd(80, 320);
+    fx.push({ t:"st", x:b.x, y:b.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 60,
+              rot: rnd(0,6.3), rotv: rnd(-10,10), s: rnd(4,10),
+              life: rnd(.5,.9), age:0, c: pick(RAINBOW) });
+  }
+  ring(b.x, b.y, 150, "#FFFFFF");
+  setTimeout(() => ring(b.x, b.y, 200, "#9FE0FF"), 80);
+  [1046, 1318, 1568, 2093].forEach((f, i) =>
+    setTimeout(() => beep(f, .16, "triangle", .11), i*70));
+}
+
+/* ぜんぶ おそうじ！ */
+const RAINBOW = ["#FF7EA8","#FFB05C","#FFE85C","#8FE39B","#7FD4FF","#B79BFF"];
+function clearAll(x, y){
+  const n = balls.length;
+  if (!n) return;
+  clears++;
+  clearScore += Math.ceil(n / 2);
+  if (scoreNow() > best) best = scoreNow();
+  updateHUD();
+
+  for (const b of balls){
+    const col = TIERS[b.tier].body;
+    for (let i = 0; i < 7; i++){
+      const a = Math.random()*Math.PI*2, sp = rnd(70, 340);
+      fx.push({ t:"p", x:b.x, y:b.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 80,
+                r: rnd(3, 7), life: rnd(.45,.9), age:0,
+                c: Math.random() < .45 ? pick(RAINBOW) : col });
+    }
+    fx.push({ t:"st", x:b.x, y:b.y, vx:rnd(-160,160), vy:rnd(-260,-60),
+              rot: rnd(0,6.3), rotv: rnd(-11,11), s: rnd(6,13),
+              life: rnd(.6,1.1), age:0, c: pick(RAINBOW) });
+  }
+  balls.length = 0;
+  clearedNow = true;
+  cur = 0; updateHUD();
+
+  fx.push({ t:"fl", x:0, y:0, life:.4, age:0 });
+  RAINBOW.forEach((c, i) => setTimeout(() => ring(x, y, 240 + i*70, c), i*55));
+  for (let i = 0; i < 8; i++)
+    fx.push({ t:"h", x: rnd(WALL_L, WALL_R), y: rnd(DANGER, floorY), vy: rnd(-120,-50), life:1.3, age:0 });
+
+  shake = Math.max(shake, 16);
+  clearFx = { n, age: 0, life: 2.0 };
+  overCount = OVER_GRACE; safeT = 0; tickSec = -1;      // きけんも リセット
+  chain = 0; chainT = 0;
+
+  [523,659,784,1046,1318,1568,2093].forEach((f, i) =>
+    setTimeout(() => beep(f, .18, "triangle", .13), i*65));
+  setTimeout(() => beep(2637, .5, "sine", .11), 500);
 }
 
 /* ひよこ ×2 → なかよく よこに かけていく */
@@ -1180,6 +1249,7 @@ function popFx(x, y){
 }
 function stepFx(dt){
   if (chainFx) chainFx.age += dt;
+  if (clearFx) clearFx.age += dt;
   for (const f of fx){
     f.age += dt;
     if (f.t === "p"){ f.vy += 620*dt; f.x += f.vx*dt; f.y += f.vy*dt; }
@@ -1999,6 +2069,33 @@ function draw(){
     ctx.beginPath(); ctx.ellipse(b.x + b.r*.1, b.y + b.r*.9, b.r*.8, b.r*.22, 0, 0, 7); ctx.fill();
     ctx.globalAlpha = 1;
     ctx.translate(b.x, b.y);
+    if (b.sparkle){
+      // にじいろの わ と まわる ほし
+      const rr = b.r + 7;
+      ctx.save();
+      ctx.globalAlpha = .35 + .25*Math.sin(time*6);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(0, 0, rr + 5, 0, 7); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 4.5; ctx.lineCap = "round";
+      for (let i = 0; i < RAINBOW.length; i++){
+        const a0 = time*2.2 + i*(Math.PI*2/RAINBOW.length);
+        ctx.strokeStyle = RAINBOW[i];
+        ctx.beginPath();
+        ctx.arc(0, 0, rr, a0, a0 + Math.PI*2/RAINBOW.length * .82);
+        ctx.stroke();
+      }
+      for (let i = 0; i < 4; i++){
+        const a0 = -time*3.1 + i*Math.PI/2;
+        ctx.save();
+        ctx.translate(Math.cos(a0)*(rr + 8), Math.sin(a0)*(rr + 8));
+        ctx.rotate(a0*2);
+        ctx.fillStyle = RAINBOW[(i*2) % RAINBOW.length];
+        star(0, 0, b.r*.22 + 2);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
     ctx.rotate(Math.max(-.5, Math.min(.5, b.ang)) * .5);
     if (b.danger > .2){
       ctx.save();
@@ -2088,6 +2185,7 @@ function draw(){
   drawOverMark();
   drawCountdown();
   drawChainText();
+  drawClearText();
 
   ctx.restore();
   drawNext();
@@ -2257,6 +2355,56 @@ function drawOverMark(){
   ctx.fillStyle = "#FF3C64";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(txt, lx, ly + 1);
+  ctx.restore();
+}
+
+/* ど〜ん！と ぜんけし */
+function drawClearText(){
+  if (!clearFx) return;
+  const k = clearFx.age / clearFx.life;
+  if (k >= 1){ clearFx = null; return; }
+  const pop = k < .14 ? .3 + 5.6*k : 1 + .09*Math.sin(clearFx.age*17);
+  const alpha = k > .78 ? Math.max(0, (1 - k)/.22) : 1;
+  const size = 62;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(CW/2, DANGER + 190);
+  ctx.rotate(Math.sin(clearFx.age*9) * .05);
+  ctx.scale(pop, pop);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+
+  const label = "ぜんけし！";
+  ctx.font = `bold ${size}px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif`;
+  ctx.fillStyle = "rgba(150,110,130,.22)";
+  ctx.fillText(label, 4, 6);
+  ctx.lineWidth = size*.26; ctx.strokeStyle = "#ffffff";
+  ctx.strokeText(label, 0, 0);
+
+  const grd = ctx.createLinearGradient(-size*2, 0, size*2, 0);
+  RAINBOW.forEach((c, i) => grd.addColorStop(i/(RAINBOW.length-1), c));
+  ctx.fillStyle = grd;
+  ctx.fillText(label, 0, 0);
+
+  // まわりを まわる ほし
+  for (let i = 0; i < 8; i++){
+    const a = clearFx.age*3.6 + i*(Math.PI*2/8);
+    const rr = size*2.1 + Math.sin(clearFx.age*8 + i)*size*.18;
+    ctx.save();
+    ctx.translate(Math.cos(a)*rr, Math.sin(a)*rr*.42);
+    ctx.rotate(a*2);
+    ctx.fillStyle = RAINBOW[i % RAINBOW.length];
+    star(0, 0, size*.2);
+    ctx.restore();
+  }
+
+  ctx.font = `bold ${size*.3}px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif`;
+  ctx.lineWidth = size*.1; ctx.strokeStyle = "#ffffff";
+  const sub = clearFx.n + "にん おそうじ ＋" + Math.ceil(clearFx.n/2) + "てん";
+  ctx.strokeText(sub, 0, size*.82);
+  ctx.fillStyle = "#7a6154";
+  ctx.fillText(sub, 0, size*.82);
   ctx.restore();
 }
 
