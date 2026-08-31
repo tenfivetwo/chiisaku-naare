@@ -1,6 +1,6 @@
 {
-  "name": "ちいさくなあれ 〜ぎゅうぎゅうどうぶつえん〜",
-  "short_name": "ちいさくなあれ",
+  "name": "まめまる 〜くっつくと ちいさくなる〜",
+  "short_name": "まめまる",
   "description": "おなじ子どうしがくっつくと ちいさくなる、ふしぎな どうぶつパズル。上のラインをこえないように、なんびきまで あつめられるかな？",
   "lang": "ja",
   "start_url": "./index.html",
@@ -9,11 +9,35 @@
   "orientation": "portrait",
   "background_color": "#ffeef5",
   "theme_color": "#ffeef5",
-  "categories": ["games", "puzzle", "casual"],
+  "categories": [
+    "games",
+    "puzzle",
+    "casual"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png",  "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png",  "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }

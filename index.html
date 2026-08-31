@@ -121,6 +121,18 @@
   #overlay .lead { font-size: 15px; line-height: 1.9; }
   #titleCv { width: 100%; max-width: 282px; height: auto; display: block; margin: -2px 0 -4px; }
   #overlay .howto { font-size: 11px; color: #a58e83; }
+  #modes { display: flex; gap: 6px; }
+  #overlay .modeinfo { font-size: 11px; color: #b79aa8; margin-top: -4px; }
+  button.mode {
+    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    color: #b79aa8; background: rgba(255,255,255,.85);
+    border: 2px solid #f0dfe6; border-radius: 999px; padding: 7px 14px;
+    white-space: nowrap;
+  }
+  button.mode.on {
+    color: #fff; background: linear-gradient(180deg,#ffb3cd,#f78bad);
+    border-color: #f78bad; box-shadow: 0 3px 0 #dd6f92;
+  }
   textarea { -webkit-user-select: text; user-select: text; }
   #save {
     position: fixed; inset: 0; z-index: 20;
@@ -234,6 +246,15 @@
   #risebar .rb i { display: block; height: 100%; width: 0%; border-radius: 4px; background: #ffa9c6; }
   #risebar.warn .rb i { background: #ff5f83; }
   #risebar.warn .rl { color: #e2506f; font-weight: 700; }
+  #risebar.nofloor .rp, #risebar.nofloor .rb { display: none; }
+  #giveUp {
+    display: none; font-family: inherit; font-size: 10px; font-weight: 700;
+    color: #b79aa8; background: #fff; border: 2px solid #f0dfe6;
+    border-radius: 999px; padding: 3px 10px; cursor: pointer; white-space: nowrap;
+  }
+  #risebar.playing #giveUp { display: block; }
+  #giveUp:active { transform: translateY(1px); }
+  #risebar.nofloor { justify-content: space-between; }
   #risebar .rv { font-size: 12px; font-weight: 700; color: #e07a9c; white-space: nowrap; }
   #sound {
     flex: 0 0 46px; background: rgba(255,255,255,.72);
@@ -260,6 +281,7 @@
     <canvas id="riseCv" class="rp"></canvas>
     <div class="rb"><i id="riseFill"></i></div>
     <span class="rv" id="riseInfo">Lv.1 ⭐0</span>
+    <button id="giveUp">やめる</button>
   </div>
 
   <div id="missions">
@@ -279,6 +301,11 @@
         つづけて くっつくほど <b>高とくてん</b>。<br>
         上のラインを こえないように！
       </p>
+      <div id="modes">
+        <button class="mode" data-m="0">ゆかは そのまま</button>
+        <button class="mode" data-m="1">ゆかが せりあがる</button>
+      </div>
+      <p class="modeinfo" id="modeInfo"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
       <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ ひよこ ×2 は なかよく かけていく<br>
   <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
@@ -381,7 +408,7 @@ let shake = 0;
 let time = 0;
 let overTimer = 0;
 let elapsed = 0, level = 1, riseT = 0, riseSpan = 1, rises = 0;
-let holdT = 99, holdSpan = 99, tickAt = -1, msTick = 0;
+let holdT = 99, holdSpan = 99, tickAt = -1, msTick = 0, saveTick = 0;
 let chain = 0, chainT = 0, chainBest = 0, chainFx = null, chainX = 0, chainY = 0;
 let chainScore = 0;                  // れんさで もらった てん
 let clearScore = 0;                  // おそうじで もらった てん
@@ -392,6 +419,8 @@ function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
 function scoreNow(){ return runBest + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
+let floorRises = false;              // ゆかが せりあがるか（きほんは そのまま）
+try { floorRises = localStorage.getItem("mamemaru-floor") === "1"; } catch(e){}
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
 const RISE_GLOW_T = 0.9;
 const OVER_GRACE = 3;                // ラインを こえてからの ゆうよ（びょう）
@@ -435,7 +464,11 @@ const LV_BACK_MAX = 2;             // 1ゲームで もどせる かいすう
 let levelAdj = 0, lvBackCool = 0, lvBackLeft = LV_BACK_MAX;
 function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_SEC)); }
 function riseInterval(){ return Math.max(10, 26 - (level-1) * 2.2); }
-function dropDelay(){ return Math.max(.17, .44 - (level-1) * .035); }
+function dropDelay(){
+  if (floorRises) return Math.max(.17, .44 - (level-1) * .035);
+  // のんびりモード：じかんを かけて ゆっくり はやくなる（12分で 下げどまり）
+  return Math.max(.15, .50 - Math.max(0, elapsed - levelAdj) * .0005);
+}
 const HOLD_LIMIT = 5.0;              // かんがえじかん（ずっと このまま）
 function holdLimit(){ return HOLD_LIMIT; }
 function gravityAt(){ return 2300 + (level-1) * 120; }
@@ -444,16 +477,19 @@ function gravityAt(){ return 2300 + (level-1) * 120; }
    おだい（3つ ずっと出つづける）
    ============================================================ */
 let missions = [], stamps = 0, runBest = 0;
-let bestEver = 0, stampTotal = 0, plays = 0;
+let bestEver = 0, bestFreeEver = 0, stampTotal = 0, plays = 0;
+function bestRef(){ return floorRises ? bestEver : bestFreeEver; }
+function setBestRef(v){ if (floorRises) bestEver = v; else bestFreeEver = v; }
 try {
   const s = JSON.parse(localStorage.getItem("fuwamoko-drop") || "{}");
   const n0 = x => { const n = Math.floor(Number(x)); return (isFinite(n) && n >= 0) ? Math.min(n, 999999) : 0; };
-  bestEver = n0(s.best); stampTotal = n0(s.stamps); plays = n0(s.plays);
+  bestEver = n0(s.best); bestFreeEver = n0(s.bestFree);
+  stampTotal = n0(s.stamps); plays = n0(s.plays);
 } catch(e){}
 function saveRec(){
   try {
     localStorage.setItem("fuwamoko-drop",
-      JSON.stringify({ best: bestEver, stamps: stampTotal, plays }));
+      JSON.stringify({ best: bestEver, bestFree: bestFreeEver, stamps: stampTotal, plays }));
   } catch(e){}
 }
 
@@ -616,7 +652,7 @@ function riseRow(){
   if (!row.length) return;
 
   // ゆかも すこしずつ せりあがる（もどらない）
-  floorY = Math.max(FLOOR_MIN, floorY - RISE_STEP);
+  if (floorRises) floorY = Math.max(FLOOR_MIN, floorY - RISE_STEP);
 
   for (const b of balls){ b.y -= h; b.py -= h; }
   for (const o of row){
@@ -664,7 +700,7 @@ function reset(){
   keepCard.classList.remove("used", "ready");
   floorY = FLOOR0;
   runBest = 0; chainScore = 0; clearScore = 0; clears = 0; clearFx = null;
-  if (bestEver > best) best = bestEver;
+  best = bestRef();
   resetMissions();
   pickTheme();           // まいかい ちがう けしき
   gravity = gravityAt();
@@ -781,20 +817,25 @@ function drawRisePreview(){
   }
 }
 
+const riseLabel = document.querySelector("#risebar .rl");
 const riseFill = document.getElementById("riseFill");
 const riseInfo = document.getElementById("riseInfo");
 const riseBar  = document.getElementById("risebar");
 function updateRiseBar(){
-  const p = state === "play" ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
+  riseBar.classList.toggle("nofloor", !floorRises);
+  riseBar.classList.toggle("playing", state === "play");
+  if (riseLabel) riseLabel.textContent = floorRises ? "よこく ⬆" : "のんびり";
+  const p = (state === "play" && floorRises)
+    ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
   riseFill.style.width = (p*100).toFixed(0) + "%";
   riseInfo.textContent = "Lv." + level + " \u2b50" + stamps;
-  riseBar.classList.toggle("warn", state === "play" && riseT < 3);
+  riseBar.classList.toggle("warn", state === "play" && floorRises && riseT < 3);
 }
 
 function updateHUD(){
   elCur.textContent = cur;
   elScore.textContent = scoreNow();
-  elBest.textContent = "さいこう " + Math.max(best, bestEver);
+  elBest.textContent = "さいこう " + Math.max(best, bestRef());
   if (elDrops) elDrops.textContent = drops;
 }
 
@@ -1016,10 +1057,12 @@ function chainFinale(n, x, y){
 
   // ごほうび：れんさが のびるほど いきのびられる
   // せり上がり1かいぶんに もらえる ごほうびは あるていど まで
-  const allow = Math.max(0, RISE_BONUS_CAP - riseBonusUsed);
+  const allow = floorRises ? Math.max(0, RISE_BONUS_CAP - riseBonusUsed) : 0;
   const sec = Math.min(allow, 9, 1.5 + (n - CHAIN_MIN) * 1.3);
   let bonus;
-  if (sec >= .5){
+  if (!floorRises){
+    bonus = "+" + chainPts(n) + "てん！";
+  } else if (sec >= .5){
     riseBonusUsed += sec;
     riseT = Math.min(riseSpan, riseT + sec);        // ためこめるのは 1かいぶん まで
     bonus = "+" + chainPts(n) + "てん ／ せりあがり +" + sec.toFixed(1) + "びょう";
@@ -1035,14 +1078,14 @@ function chainFinale(n, x, y){
     lvBackCool = LV_BACK_COOL;
     lvBackLeft--;
     const nl = levelAt(elapsed - levelAdj);
-    bonus = "はやさが Lv." + nl + " に もどった！"
+    bonus = (floorRises ? "はやさが Lv." + nl + " に もどった！" : "はやさが すこし もどった！")
           + (lvBackLeft > 0 ? "（あと" + lvBackLeft + "かい）" : "（さいご）");
     for (let i = 0; i < 18; i++)
       fx.push({ t:"st", x: rnd(WALL_L, WALL_R), y: rnd(DANGER, DANGER + 220),
                 vx: rnd(-70,70), vy: rnd(60, 220), rot: rnd(0,6.3), rotv: rnd(-8,8),
                 s: rnd(5,11), life: rnd(.6,1.0), age:0, c:"#9BE8B4" });
   }
-  if (n >= 8){
+  if (n >= 8 && floorRises){
     floorY = Math.min(FLOOR0, floorY + RISE_STEP);
     bonus = "+" + chainPts(n) + "てん ／ ゆかが さがった！";
     for (let i = 0; i < 14; i++)
@@ -2594,11 +2637,13 @@ function update(dt){
     updateRiseBar();
   }
 
-  riseT -= dt;
-  if (riseT <= 0){
-    riseRow();
-    riseSpan = riseInterval();
-    riseT = riseSpan;
+  if (floorRises){
+    riseT -= dt;
+    if (riseT <= 0){
+      riseRow();
+      riseSpan = riseInterval();
+      riseT = riseSpan;
+    }
   }
 
   step(dt);
@@ -2610,6 +2655,7 @@ function update(dt){
     if (cur > runBest) runBest = cur;
     if (scoreNow() > best) best = scoreNow();
     updateHUD();
+    if (scoreNow() > bestRef()) setBestRef(scoreNow());   // おわらなくても 記録は のこす
   }
 
   // おだいの しんちょく
@@ -2646,6 +2692,8 @@ function update(dt){
 
   msTick += dt;
   if (msTick > .12){ msTick = 0; renderMissions(); updateRiseBar(); }
+  saveTick += dt;
+  if (saveTick > 10){ saveTick = 0; saveRec(); }          // 10びょうごとに 保存
 
   dropLock = Math.max(0, dropLock - dt);
   if (!held && dropLock <= 0){
@@ -2736,16 +2784,20 @@ function drop(){
   beep(560 - b.tier*30, .06, "sine", .07);
 }
 
-function gameOver(){
+function gameOver(byUser){
   state = "over";
-  shake = 9;
+  shake = byUser ? 0 : 9;
   toastEl.classList.remove("show");
-  for (let i = 0; i < 3; i++){
-    setTimeout(() => beep(420 - i*90, .22, "sawtooth", .07), i*130);
+  if (byUser){
+    [784, 988, 1175].forEach((f, i) => setTimeout(() => beep(f, .18, "triangle", .09), i*110));
+  } else {
+    for (let i = 0; i < 3; i++){
+      setTimeout(() => beep(420 - i*90, .22, "sawtooth", .07), i*130);
+    }
   }
   const sc = scoreNow();
-  const isRec = sc > bestEver;
-  if (isRec) bestEver = sc;
+  const isRec = sc > bestRef();
+  if (isRec) setBestRef(sc);
   stampTotal += stamps;
   plays++;
   saveRec();
@@ -2753,16 +2805,18 @@ function gameOver(){
     setTimeout(() => beep(f, .2, "triangle", .12), i*90)); }, 420);
 
   const next = nextGoal(sc);
+  const modeName = floorRises ? "ゆかが せりあがる" : "ゆかは そのまま";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
   overlay.innerHTML = `
     <div class="panel">
-      <h1>${isRec ? "あたらしい記録！ 🎉" : "もう いっぱい…"}</h1>
+      <h1>${isRec ? "あたらしい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
       <div class="big">${sc} <span style="font-size:16px">てん</span></div>
       <p class="calc">あつめた ${runBest} ＋ れんさ ${chainScore}</p>
       <p class="rank">${rankOf(sc)}</p>
       <p>つぎの目標：${next}</p>
       <p class="ms-got">⭐ おだい ${stamps} こ たっせい</p>
+      <p style="font-size:10px;color:#b79aa8">モード：${modeName}</p>
       <div class="btnrow">
         <button class="btn" id="againBtn">もういちど</button>
         <button class="btn sub" id="quitBtn">おわる</button>
@@ -2770,6 +2824,7 @@ function gameOver(){
     </div>`;
   document.getElementById("againBtn").addEventListener("click", start);
   document.getElementById("quitBtn").addEventListener("click", showTitle);
+  updateRiseBar();
 }
 
 /* きろくを ほぞん・よみこみ */
@@ -2780,7 +2835,7 @@ const saveMsg  = document.getElementById("saveMsg");
 
 function myCode(){
   return btoa(unescape(encodeURIComponent(JSON.stringify(
-    { b: bestEver, s: stampTotal, p: plays }))));
+    { b: bestEver, f: bestFreeEver, s: stampTotal, p: plays }))));
 }
 function openSave(){
   saveCode.value = myCode();
@@ -2819,17 +2874,21 @@ function loadFromCode(){
     const o = JSON.parse(decodeURIComponent(escape(atob(v))));
     if (!o || typeof o !== "object" || Array.isArray(o)) throw 0;
     if (typeof o.b !== "number") throw 0;
-    bestEver   = Math.max(bestEver,   safeNum(o.b));
+    bestEver     = Math.max(bestEver,     safeNum(o.b));
+    bestFreeEver = Math.max(bestFreeEver, safeNum(o.f));
     stampTotal = Math.max(stampTotal, safeNum(o.s));
     plays      = Math.max(plays,      safeNum(o.p));
-    if (bestEver > best) best = bestEver;
+    best = Math.max(best, bestRef());
     saveRec(); updateHUD();
     saveCode.value = myCode();
-    saveMsg.textContent = "よみこみました！ さいこう " + bestEver + "てん";
+    saveMsg.textContent = "よみこみました！ さいこう " + bestRef() + "てん";
   } catch(e){
     saveMsg.textContent = "もじれつが ちがうみたい…";
   }
 }
+document.getElementById("giveUp").addEventListener("click", () => {
+  if (state === "play") gameOver(true);
+});
 document.getElementById("copyBtn").addEventListener("click", copyCode);
 document.getElementById("loadBtn").addEventListener("click", loadFromCode);
 document.getElementById("closeSave").addEventListener("click", closeSave);
@@ -2923,6 +2982,26 @@ function bindTitleButtons(){
   if (cb) cb.addEventListener("click", openSave);
   initTitleArt();
   initChainBar();
+  const btns = document.querySelectorAll("#modes .mode");
+  const info = document.getElementById("modeInfo");
+  const paint = () => {
+    btns.forEach(o => o.classList.toggle("on",
+      (o.getAttribute("data-m") === "1") === floorRises));
+    if (info) info.textContent = floorRises
+      ? "ゆかが すこしずつ あがって、いつか おしまい"
+      : "ゆかは あがらない。ずっと あそべる のんびりモード";
+    best = bestRef();
+    updateHUD();
+  };
+  btns.forEach(b => {
+    b.addEventListener("click", () => {
+      floorRises = b.getAttribute("data-m") === "1";
+      try { localStorage.setItem("mamemaru-floor", floorRises ? "1" : "0"); } catch(e){}
+      paint();
+      beep(floorRises ? 880 : 660, .09, "triangle", .08);
+    });
+  });
+  paint();
 }
 
 /* タイトルへ もどる */
