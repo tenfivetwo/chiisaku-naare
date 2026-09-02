@@ -381,7 +381,7 @@ function fitCanvas(){
   const availW = Math.max(120, wrapEl.clientWidth - padH);
   let scale = Math.min(availW / CW, availH / CH, 1.1);
   scale = Math.max(scale, .18);          // はみ出さないよう 下げきる
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = CW * dpr; cv.height = CH * dpr;
   cv.style.width = (CW * scale) + "px";
   cv.style.height = (CH * scale) + "px";
@@ -718,10 +718,18 @@ const nextCv = document.getElementById("nextCv");
 const nctx = nextCv.getContext("2d");
 const NW = 70, NH = 34;
 (function initNext(){
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   nextCv.width = NW*dpr; nextCv.height = NH*dpr;
   nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 })();
+let miniTick = 0, miniKey = "";
+function miniDirty(){
+  const k = queue.slice(0,2).join(",") + "|" + keepTier + "|" + keepUsed
+          + "|" + (uiSurp() > 0 ? "s" + Math.floor(time*20) : "")
+          + "|" + Math.floor(time*5);      // ふだんは 5コマ/秒 でじゅうぶん
+  if (k === miniKey) return false;
+  miniKey = k; return true;
+}
 function drawNext(){
   nctx.clearRect(0, 0, NW, NH);
   for (let i = 0; i < Math.min(2, queue.length); i++){
@@ -739,7 +747,7 @@ const keepCv = document.getElementById("keepCv");
 const kctx = keepCv.getContext("2d");
 const keepCard = document.getElementById("keepCard");
 (function initKeep(){
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   keepCv.width = NW*dpr; keepCv.height = NH*dpr;
   kctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 })();
@@ -793,7 +801,7 @@ const riseCv = document.getElementById("riseCv");
 const rctx = riseCv.getContext("2d");
 const RW = 104, RH = 27;
 (function initRisePv(){
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   riseCv.width = RW*dpr; riseCv.height = RH*dpr;
   rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 })();
@@ -1308,7 +1316,8 @@ function stepFx(dt){
    キャラ描画（ふわふわ）
    ============================================================ */
 function fluffPath(g, r, bumps, amp, phase){
-  const steps = Math.max(48, bumps*8);
+  // でこぼこ 1つあたり 4点あれば なめらかに 見える（ちいさい子は 点を へらす）
+  const steps = Math.max(24, Math.min(96, Math.round(Math.max(r * 1.0, bumps * 4))));
   g.beginPath();
   for (let i = 0; i <= steps; i++){
     const a = i/steps * Math.PI*2;
@@ -1908,6 +1917,7 @@ function reseedDeco(){
   }
 }
 function pickTheme(){
+  skyKey = ""; panKey = "";
   let t = TH, guard = 0;
   while (t === TH && guard++ < 8) t = pick(THEMES);
   TH = t;
@@ -1926,30 +1936,69 @@ function star(x, y, s){
   ctx.closePath(); ctx.fill();
 }
 
-function drawBackground(){
-  ctx.save();
-  roundRect(ctx, 0, 0, CW, CH, 20); ctx.clip();
-
-  const bg = ctx.createLinearGradient(0, 0, 0, CH);
+/* うごかない はいけいは 1まいの えに 焼いて つかいまわす（でんち もち のため） */
+let skyCv = null, skyCtx = null, skyKey = "";
+let panCv = null, panCtx = null, panKey = "";
+function offCanvas(){
+  const c = document.createElement("canvas");
+  c.width = CW; c.height = CH;
+  return c;
+}
+function ensureSky(){
+  if (skyKey === TH.nm && skyCv) return;
+  skyKey = TH.nm;
+  if (!skyCv){ skyCv = offCanvas(); skyCtx = skyCv.getContext("2d"); }
+  const g = skyCtx;
+  g.clearRect(0, 0, CW, CH);
+  g.save();
+  roundRect(g, 0, 0, CW, CH, 20); g.clip();
+  const bg = g.createLinearGradient(0, 0, 0, CH);
   bg.addColorStop(0,   TH.sky[0]);
   bg.addColorStop(.28, TH.sky[1]);
   bg.addColorStop(.55, TH.sky[2]);
   bg.addColorStop(1,   TH.sky[3]);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, CW, CH);
-
-  // にじ
+  g.fillStyle = bg;
+  g.fillRect(0, 0, CW, CH);
   if (TH.rainbow){
-    ctx.save();
-    ctx.globalAlpha = .3; ctx.lineWidth = 10;
+    g.globalAlpha = .3; g.lineWidth = 10;
     ["#ffb3c6","#ffd9a0","#fff3a8","#b6e8c6","#aed6ff","#d9c2ff"].forEach((c,i) => {
-      ctx.strokeStyle = c;
-      ctx.beginPath();
-      ctx.arc(CW*.52, 215, 172 - i*10, Math.PI*1.06, Math.PI*1.94);
-      ctx.stroke();
+      g.strokeStyle = c;
+      g.beginPath();
+      g.arc(CW*.52, 215, 172 - i*10, Math.PI*1.06, Math.PI*1.94);
+      g.stroke();
     });
-    ctx.restore();
+    g.globalAlpha = 1;
   }
+  g.restore();
+}
+function ensurePanel(){
+  const key = TH.nm + "|" + Math.round(floorY);
+  if (panKey === key && panCv) return;
+  panKey = key;
+  if (!panCv){ panCv = offCanvas(); panCtx = panCv.getContext("2d"); }
+  const g = panCtx;
+  g.clearRect(0, 0, CW, CH);
+  g.save();
+  roundRect(g, WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18, 16); g.clip();
+  g.fillStyle = TH.panel;
+  g.fillRect(WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18);
+  g.fillStyle = TH.stripe;
+  for (let x = WALL_L; x < WALL_R; x += 46) g.fillRect(x, DANGER-12, 23, floorY-DANGER+18);
+  g.fillStyle = TH.dot;
+  let row = 0;
+  for (let y = DANGER; y < floorY + 20; y += 30, row++)
+    for (let x = WALL_L + (row % 2 ? 15 : 0); x < WALL_R; x += 30){
+      g.beginPath(); g.arc(x, y, 3.2, 0, 7); g.fill();
+    }
+  g.restore();
+}
+
+function drawBackground(){
+  ensureSky();
+  ctx.drawImage(skyCv, 0, 0);
+
+  ctx.save();
+  roundRect(ctx, 0, 0, CW, CH, 20); ctx.clip();
 
   // おひさま／おつきさま
   const sx = 50, sy = 42;
@@ -2008,26 +2057,20 @@ function drawBackground(){
   cloud(232 + Math.sin(time*.08+2)*24, 24, 14);
   ctx.restore();
 
-  // カゴのなか（しましま＋みずたま）
-  ctx.save();
-  roundRect(ctx, WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18, 16); ctx.clip();
-  ctx.fillStyle = TH.panel;
-  ctx.fillRect(WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18);
-  ctx.fillStyle = TH.stripe;
-  for (let x = WALL_L; x < WALL_R; x += 46) ctx.fillRect(x, DANGER-12, 23, floorY-DANGER+18);
-  ctx.fillStyle = TH.dot;
-  let row = 0;
-  for (let y = DANGER; y < floorY + 20; y += 30, row++)
-    for (let x = WALL_L + (row % 2 ? 15 : 0); x < WALL_R; x += 30){
-      ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill();
-    }
-  ctx.restore();
+  // カゴのなか（しましま＋みずたま）＝ 焼いた え
+  ensurePanel();
+  ctx.drawImage(panCv, 0, 0);
 }
 
 /* ============================================================
    えがく
    ============================================================ */
+let idleTick = 0;
 function draw(){
+  if (state === "title"){                 // うしろは かくれているので えがく回数を へらす
+    drawTitleArt();
+    if (++idleTick % 10 !== 1) return;
+  }
   ctx.clearRect(0,0,CW,CH);
   ctx.save();
   if (shake > .1){
@@ -2231,9 +2274,9 @@ function draw(){
   drawClearText();
 
   ctx.restore();
-  drawNext();
-  drawKeep();
-  drawTitleArt();
+  miniTick++;
+  if (miniDirty()){ drawNext(); drawKeep(); }
+  if (state === "title") drawTitleArt();
   if (uiShockT > 0 || uiShockWait > 0){
     drawRisePreview();
     renderChainBar(uiSurp());
@@ -2923,7 +2966,7 @@ function initTitleArt(){
   rollTitleCast();                                    // まいかい ちがう なかまが 出る
   const c = document.getElementById("titleCv");
   if (!c){ tctx = null; return; }
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   c.width = TAW*dpr; c.height = TAH*dpr;
   tctx = c.getContext("2d");
   tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -3110,7 +3153,7 @@ window.addEventListener("keydown", e => {
 function initChainBar(){
   const c = document.getElementById("chainCv");
   if (!c){ bctx = null; return; }
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   c.width = 430*dpr; c.height = 92*dpr;
   bctx = c.getContext("2d");
   bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
