@@ -1,5 +1,5 @@
 /* ちいさくなあれ — オフライン用 Service Worker */
-const VERSION = "v22";
+const VERSION = "v23";
 const CACHE = "mamemaru-" + VERSION;
 const ASSETS = [
   "./",

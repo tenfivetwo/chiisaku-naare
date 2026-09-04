@@ -246,7 +246,7 @@
   #risebar .rb i { display: block; height: 100%; width: 0%; border-radius: 4px; background: #ffa9c6; }
   #risebar.warn .rb i { background: #ff5f83; }
   #risebar.warn .rl { color: #e2506f; font-weight: 700; }
-  #risebar.nofloor .rp, #risebar.nofloor .rb { display: none; }
+  #risebar.nofloor .rp { display: none; }
   #giveUp {
     display: none; font-family: inherit; font-size: 10px; font-weight: 700;
     color: #b79aa8; background: #fff; border: 2px solid #f0dfe6;
@@ -302,8 +302,8 @@
         上のラインを こえないように！
       </p>
       <div id="modes">
-        <button class="mode" data-m="0">ゆかは そのまま</button>
-        <button class="mode" data-m="1">ゆかが せりあがる</button>
+        <button class="mode" data-m="0">キャラは わかない</button>
+        <button class="mode" data-m="1">キャラも わく</button>
       </div>
       <p class="modeinfo" id="modeInfo"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
@@ -419,8 +419,9 @@ function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
 function scoreNow(){ return runBest + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
-let floorRises = false;              // ゆかが せりあがるか（きほんは そのまま）
-try { floorRises = localStorage.getItem("mamemaru-floor") === "1"; } catch(e){}
+// ゆかは どちらのモードでも せりあがる。ちがいは 下から キャラが わくか どうか
+let spawnRows = false;
+try { spawnRows = localStorage.getItem("mamemaru-spawn") === "1"; } catch(e){}
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
 const RISE_GLOW_T = 0.9;
 const OVER_GRACE = 3;                // ラインを こえてからの ゆうよ（びょう）
@@ -464,11 +465,7 @@ const LV_BACK_MAX = 2;             // 1ゲームで もどせる かいすう
 let levelAdj = 0, lvBackCool = 0, lvBackLeft = LV_BACK_MAX;
 function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_SEC)); }
 function riseInterval(){ return Math.max(10, 26 - (level-1) * 2.2); }
-function dropDelay(){
-  if (floorRises) return Math.max(.17, .44 - (level-1) * .035);
-  // のんびりモード：じかんを かけて ゆっくり はやくなる（12分で 下げどまり）
-  return Math.max(.15, .50 - Math.max(0, elapsed - levelAdj) * .0005);
-}
+function dropDelay(){ return Math.max(.17, .44 - (level-1) * .035); }
 const HOLD_LIMIT = 5.0;              // かんがえじかん（ずっと このまま）
 function holdLimit(){ return HOLD_LIMIT; }
 function gravityAt(){ return 2300 + (level-1) * 120; }
@@ -478,8 +475,8 @@ function gravityAt(){ return 2300 + (level-1) * 120; }
    ============================================================ */
 let missions = [], stamps = 0, runBest = 0;
 let bestEver = 0, bestFreeEver = 0, stampTotal = 0, plays = 0;
-function bestRef(){ return floorRises ? bestEver : bestFreeEver; }
-function setBestRef(v){ if (floorRises) bestEver = v; else bestFreeEver = v; }
+function bestRef(){ return spawnRows ? bestEver : bestFreeEver; }
+function setBestRef(v){ if (spawnRows) bestEver = v; else bestFreeEver = v; }
 try {
   const s = JSON.parse(localStorage.getItem("fuwamoko-drop") || "{}");
   const n0 = x => { const n = Math.floor(Number(x)); return (isFinite(n) && n >= 0) ? Math.min(n, 999999) : 0; };
@@ -651,11 +648,11 @@ function riseRow(){
   const row = R.items, off = R.off, h = R.h;
   if (!row.length) return;
 
-  // ゆかも すこしずつ せりあがる（もどらない）
-  if (floorRises) floorY = Math.max(FLOOR_MIN, floorY - RISE_STEP);
+  // ゆかは かならず せりあがる（もどらない）
+  floorY = Math.max(FLOOR_MIN, floorY - RISE_STEP);
 
-  for (const b of balls){ b.y -= h; b.py -= h; }
-  for (const o of row){
+  if (spawnRows) for (const b of balls){ b.y -= h; b.py -= h; }
+  if (spawnRows) for (const o of row){
     const nb = newBall(o.t, off + o.x, floorY - TIERS[o.t].r);
     nb.age = 1.2;
     nb.sqv = -0.4;
@@ -666,8 +663,7 @@ function riseRow(){
   if (held) makeShock(held, .3, 1.1, 2);
   uiShock(.3, 1.15);
 
-  nextRow = makeRow();
-  drawRisePreview();
+  if (spawnRows){ nextRow = makeRow(); drawRisePreview(); }
 
   riseGlow = RISE_GLOW_T;
   // ゆかの下から のぼる こな
@@ -830,14 +826,13 @@ const riseFill = document.getElementById("riseFill");
 const riseInfo = document.getElementById("riseInfo");
 const riseBar  = document.getElementById("risebar");
 function updateRiseBar(){
-  riseBar.classList.toggle("nofloor", !floorRises);
+  riseBar.classList.toggle("nofloor", !spawnRows);   // よこくの え を 出すか
   riseBar.classList.toggle("playing", state === "play");
-  if (riseLabel) riseLabel.textContent = floorRises ? "よこく ⬆" : "のんびり";
-  const p = (state === "play" && floorRises)
-    ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
+  if (riseLabel) riseLabel.textContent = spawnRows ? "よこく ⬆" : "ゆか ⬆";
+  const p = state === "play" ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
   riseFill.style.width = (p*100).toFixed(0) + "%";
   riseInfo.textContent = "Lv." + level + " \u2b50" + stamps;
-  riseBar.classList.toggle("warn", state === "play" && floorRises && riseT < 3);
+  riseBar.classList.toggle("warn", state === "play" && riseT < 3);
 }
 
 function updateHUD(){
@@ -1065,12 +1060,10 @@ function chainFinale(n, x, y){
 
   // ごほうび：れんさが のびるほど いきのびられる
   // せり上がり1かいぶんに もらえる ごほうびは あるていど まで
-  const allow = floorRises ? Math.max(0, RISE_BONUS_CAP - riseBonusUsed) : 0;
+  const allow = Math.max(0, RISE_BONUS_CAP - riseBonusUsed);
   const sec = Math.min(allow, 9, 1.5 + (n - CHAIN_MIN) * 1.3);
   let bonus;
-  if (!floorRises){
-    bonus = "+" + chainPts(n) + "てん！";
-  } else if (sec >= .5){
+  if (sec >= .5){
     riseBonusUsed += sec;
     riseT = Math.min(riseSpan, riseT + sec);        // ためこめるのは 1かいぶん まで
     bonus = "+" + chainPts(n) + "てん ／ せりあがり +" + sec.toFixed(1) + "びょう";
@@ -1086,14 +1079,14 @@ function chainFinale(n, x, y){
     lvBackCool = LV_BACK_COOL;
     lvBackLeft--;
     const nl = levelAt(elapsed - levelAdj);
-    bonus = (floorRises ? "はやさが Lv." + nl + " に もどった！" : "はやさが すこし もどった！")
+    bonus = "はやさが Lv." + nl + " に もどった！"
           + (lvBackLeft > 0 ? "（あと" + lvBackLeft + "かい）" : "（さいご）");
     for (let i = 0; i < 18; i++)
       fx.push({ t:"st", x: rnd(WALL_L, WALL_R), y: rnd(DANGER, DANGER + 220),
                 vx: rnd(-70,70), vy: rnd(60, 220), rot: rnd(0,6.3), rotv: rnd(-8,8),
                 s: rnd(5,11), life: rnd(.6,1.0), age:0, c:"#9BE8B4" });
   }
-  if (n >= 8 && floorRises){
+  if (n >= 8){
     floorY = Math.min(FLOOR0, floorY + RISE_STEP);
     bonus = "+" + chainPts(n) + "てん ／ ゆかが さがった！";
     for (let i = 0; i < 14; i++)
@@ -2680,13 +2673,11 @@ function update(dt){
     updateRiseBar();
   }
 
-  if (floorRises){
-    riseT -= dt;
-    if (riseT <= 0){
-      riseRow();
-      riseSpan = riseInterval();
-      riseT = riseSpan;
-    }
+  riseT -= dt;
+  if (riseT <= 0){
+    riseRow();
+    riseSpan = riseInterval();
+    riseT = riseSpan;
   }
 
   step(dt);
@@ -2848,7 +2839,7 @@ function gameOver(byUser){
     setTimeout(() => beep(f, .2, "triangle", .12), i*90)); }, 420);
 
   const next = nextGoal(sc);
-  const modeName = floorRises ? "ゆかが せりあがる" : "ゆかは そのまま";
+  const modeName = spawnRows ? "キャラも わいてくる" : "キャラは わいてこない";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
   overlay.innerHTML = `
@@ -3029,19 +3020,19 @@ function bindTitleButtons(){
   const info = document.getElementById("modeInfo");
   const paint = () => {
     btns.forEach(o => o.classList.toggle("on",
-      (o.getAttribute("data-m") === "1") === floorRises));
-    if (info) info.textContent = floorRises
-      ? "ゆかが すこしずつ あがって、いつか おしまい"
-      : "ゆかは あがらない。ずっと あそべる のんびりモード";
+      (o.getAttribute("data-m") === "1") === spawnRows));
+    if (info) info.textContent = spawnRows
+      ? "ゆかが あがり、下からも なかまが わいてくる"
+      : "ゆかが すこしずつ あがってくる";
     best = bestRef();
     updateHUD();
   };
   btns.forEach(b => {
     b.addEventListener("click", () => {
-      floorRises = b.getAttribute("data-m") === "1";
-      try { localStorage.setItem("mamemaru-floor", floorRises ? "1" : "0"); } catch(e){}
+      spawnRows = b.getAttribute("data-m") === "1";
+      try { localStorage.setItem("mamemaru-spawn", spawnRows ? "1" : "0"); } catch(e){}
       paint();
-      beep(floorRises ? 880 : 660, .09, "triangle", .08);
+      beep(spawnRows ? 880 : 660, .09, "triangle", .08);
     });
   });
   paint();
