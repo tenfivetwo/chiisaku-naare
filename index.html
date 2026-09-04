@@ -346,12 +346,11 @@ const TIERS = [
   { name:"くま",     r:36, body:"#D5A472", shade:"#BA8752", line:"#9C6D3E", ear:"round", earIn:"#F3CFA8", face:"bear",   sm:"tooth",  eye:"wink",    acc:"note",    fluff:16, amp:.034 },
   { name:"いぬ",     r:29, body:"#F7DCA9", shade:"#E4C285", line:"#C2A167", ear:"floppy",earIn:"#E8BC7C", face:"dog",    sm:"tongue", eye:"sparkle", acc:"sparkle", fluff:14, amp:.03  },
   { name:"ねこ",     r:23, body:"#FFCE93", shade:"#F5B26B", line:"#D89149", ear:"cat",   earIn:"#FFAFC9", face:"cat",    sm:"nyan",   eye:"arc",     acc:"star",    fluff:13, amp:.034 },
-  { name:"うさぎ",   r:18, body:"#FFDFEC", shade:"#FBC4DA", line:"#E5A2BE", ear:"long",  earIn:"#FFAFC9", face:"rabbit", sm:"bunny",  eye:"arc",     acc:"heart",   fluff:12, amp:.03  },
-  { name:"ひよこ",   r:14, body:"#FFE889", shade:"#FBD25B", line:"#DDAE33", ear:"tuft",  earIn:"#FBD25B", face:"chick",  sm:"beak",   eye:"sparkle", acc:"note",    fluff:11, amp:.036 },
+  { name:"ひよこ",   r:18, body:"#FFE889", shade:"#FBD25B", line:"#DDAE33", ear:"tuft",  earIn:"#FBD25B", face:"chick",  sm:"beak",   eye:"sparkle", acc:"note",    fluff:12, amp:.036 },
 ];
 const LAST = TIERS.length - 1;
 // おとせるのは しろくま〜ねこ（大きい子ほど よく出る）
-const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // うさぎ と ひよこ は 合体でしか 生まれない
+const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // ひよこ は 合体でしか 生まれない
 
 /* ============================================================
    ばめん
@@ -413,8 +412,8 @@ let chain = 0, chainT = 0, chainBest = 0, chainFx = null, chainX = 0, chainY = 0
 let chainScore = 0;                  // れんさで もらった てん
 let clearScore = 0;                  // おそうじで もらった てん
 let clearFx = null, clears = 0;
-const SPARKLE_RATE = 1 / 60;         // うさぎ・ひよこが ひかって 生まれる かくりつ
-const SPARKLE_TIER = 5;              // これ いこうの 子が ひかる（うさぎ・ひよこ）
+const SPARKLE_RATE = 1 / 40;         // ひよこが ひかって 生まれる かくりつ
+const SPARKLE_TIER = 5;              // これ いこうの 子が ひかる（ひよこ）
 function chainPts(n){ const k = n - CHAIN_MIN + 1; return Math.ceil(k*k / 3); }
 function scoreNow(){ return runBest + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
