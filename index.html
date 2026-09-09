@@ -351,7 +351,7 @@
    ============================================================ */
 const TIERS = [
   { name:"しろくま", r:64, body:"#FFF7F0", shade:"#F0DED2", line:"#C9A894", ear:"round", earIn:"#FFD6DC", face:"bear",   sm:"grin",   eye:"sparkle", acc:"heart2",  fluff:18, amp:.032 },
-  { name:"ぶた",     r:49, body:"#FFC5D2", shade:"#F5A3B7", line:"#DD8298", ear:"pig",   earIn:"#FF9DB4", face:"pig",    sm:"piggy",  eye:"sparkle", acc:"heart",   fluff:17, amp:.028 },
+  { name:"うし",     r:49, body:"#FFFDF8", shade:"#EDE7E0", line:"#C4BAB1", ear:"cow",   earIn:"#FFC2D2", face:"cow",    sm:"cow",    eye:"sparkle", acc:"note",    fluff:17, amp:.026, cowA:"#3B3330" },
   { name:"こあら",   r:36, body:"#BFC6CD", shade:"#9FA8B2", line:"#7F8A95", ear:"koala", earIn:"#F4ECE6", face:"koala",  sm:"koala",  eye:"sparkle", acc:"note",    fluff:16, amp:.034 },
   { name:"いぬ",     r:29, body:"#4A4340", shade:"#332E2C", line:"#241F1E", ear:"shiba", earIn:"#8A6B5A", face:"shiba",  sm:"tongue", eye:"sparkle", acc:"sparkle", fluff:14, amp:.03, hi:"#7A716C", tan:"#F3E2C8" },
   { name:"ねこ",     r:26, body:"#FFFAF4", shade:"#F0E5DC", line:"#D6C4B6", ear:"cat",   earIn:"#FFAFC9", face:"cat",    sm:"nyan",   eye:"arc",     acc:"star",    fluff:14, amp:.034, mike:true, mikeA:"#F2A85E", mikeB:"#4A403C" },
@@ -1528,6 +1528,16 @@ function drawSmileMouth(g, T, r){
       break;
     }
 
+    case "cow": {           // うし：はなづらの 下に ちいさく
+      const my = r*.62;
+      g.strokeStyle = MC; g.lineWidth = Math.max(1.1, r*.05); g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(-r*.10, my - r*.03);
+      g.quadraticCurveTo(0, my + r*.07, r*.10, my - r*.03);
+      g.stroke();
+      break;
+    }
+
     case "koala": {         // こあら：大きな はなの 下に ちいさく
       const my = r*.62;
       g.strokeStyle = MC; g.lineWidth = Math.max(1.1, r*.05); g.lineCap = "round";
@@ -1726,6 +1736,30 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.closePath(); g.fill();
       g.restore();
     }
+  } else if (T.ear === "cow"){
+    // つの（ちいさく、やさしい 色。とがらせない）
+    g.fillStyle = "#F2E3C8";
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.31, -r*.88); g.scale(s, 1); g.rotate(-.30);
+      g.beginPath();
+      g.moveTo(-r*.085, r*.12);
+      g.quadraticCurveTo(-r*.10, -r*.20, r*.05, -r*.25);
+      g.quadraticCurveTo(r*.13, -r*.18, r*.085, r*.12);
+      g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
+    // よこに はりだした たれみみ。ぶちと つながる みぎがわは 黒い
+    for (const s of [-1, 1]){
+      const dark = (s > 0);
+      g.save(); g.translate(s*r*.80, -r*.30); g.scale(s, 1); g.rotate(.34);
+      g.fillStyle   = dark ? (T.cowA || "#3B3330") : T.body;
+      g.strokeStyle = dark ? (T.cowA || "#3B3330") : T.line;
+      g.beginPath(); g.ellipse(0, 0, r*.38, r*.20, 0, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = dark ? "#D98FA6" : T.earIn;
+      g.beginPath(); g.ellipse(r*.03, 0, r*.24, r*.11, 0, 0, 7); g.fill();
+      g.restore();
+    }
+    g.strokeStyle = T.line;
   } else if (T.ear === "koala"){
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.72, -r*.22);
@@ -1844,6 +1878,38 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.fillStyle = T.mikeB;                                   // くろ：左うえ（すこし ちいさめ）
     g.beginPath(); g.ellipse(-r*.40, -r*.60, r*.28, r*.23, -.26, 0, 7); g.fill();
     g.restore();
+  }
+  // うしの ぶち：顔の みぎ 4わりほどを まとめて 黒く する。
+  // そとがわの ふちは もこもこの 輪郭を そのまま なぞる。丸で 近似すると
+  // ふちに 白い すきまが 出たり 黒が はみ出したり するので、この計算を 外さないこと。
+  if (T.face === "cow"){
+    g.save();
+    g.fillStyle = T.cowA || "#3B3330";
+    const a0 = -Math.PI*0.60, a1 = Math.PI*0.34, N = 44;
+    g.beginPath();
+    for (let i = 0; i <= N; i++){
+      const a = a0 + (a1 - a0) * i / N;
+      const rr = r * (1 - T.amp + T.amp*Math.sin(a*T.fluff + phase));
+      const x = Math.cos(a)*rr, y = Math.sin(a)*rr;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    // 内がわは やわらかい なみ線で とじる（まっすぐには 切らない）
+    g.bezierCurveTo(r*.16, r*.60, r*.22, r*.18, r*.06, -r*.16);
+    g.bezierCurveTo(-r*.06, -r*.44, r*.04, -r*.72, -r*.31, -r*.95);
+    g.closePath(); g.fill();
+    // ひだり下に ちいさい ぶちを ひとつ（左右で つりあいを とる）
+    g.beginPath(); g.ellipse(-r*.62, r*.52, r*.21, r*.15, -.38, 0, 7); g.fill();
+    g.restore();
+    // はなづら（うしの いちばんの とくちょう。よこ長で 大きい）
+    g.fillStyle = "#FFC2D2";
+    g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*.04);
+    g.beginPath(); g.ellipse(0, r*.33, r*.30, r*.215, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "#E39BAF";
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(s2*r*.115, r*.29, r*.042, r*.055, s2*.2, 0, 7); g.fill();
+    }
+    g.fillStyle = "rgba(255,255,255,.5)";
+    g.beginPath(); g.ellipse(-r*.09, r*.24, r*.09, r*.045, -.28, 0, 7); g.fill();
   }
   // ひよこの ちいさな はね
   if (T.face === "chick"){
@@ -1986,7 +2052,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.stroke();
       g.fillStyle = "#4A3A33";
       g.beginPath(); g.ellipse(ex, eyeY - r*.035, r*.05, r*.058, 0, 0, 7); g.fill();
-    } else if (T.face === "panda" || T.face === "shiba"){
+    } else if (T.face === "panda" || T.face === "shiba" || T.face === "cow"){
       // ぱんだ・くろしば：くらい顔なので しろめ＋くろめ（きらきら）で うかせる
       const k = shock ? 1.34 : happy ? 1.18 : 1;
       const ky = shock ? 1 : (happy ? 1 : blinkAmt);
@@ -2018,7 +2084,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
 
   if (shock && kind === 2){
     // せり上がり：ぷるぷる した くち
-    const my = T.face === "pig" ? r*.58 : (T.face === "koala" ? r*.62 : r*.245);
+    const my = T.face === "pig" ? r*.58 : ((T.face === "koala" || T.face === "cow") ? r*.62 : r*.245);
     if (T.face === "chick"){
       g.save();
       g.translate(0, my - r*.03); g.rotate(Math.sin(phase*19)*.28);
@@ -2035,7 +2101,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.quadraticCurveTo(-r*.058, my - r*.062, 0, my);
       g.quadraticCurveTo(r*.058, my + r*.062, r*.115, my);
       g.stroke();
-      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala"){
+      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
         g.fillStyle = "#5C463C";
         g.beginPath(); g.ellipse(0, my - r*.115, r*.06, r*.043, 0, 0, 7); g.fill();
       }
@@ -2062,12 +2128,12 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.fillStyle = "#E07A20";
       g.beginPath(); g.ellipse(0, r*.27, r*.055, r*.045, 0, 0, 7); g.fill();
     } else {
-      const oy = T.face === "pig" ? r*.34 : (T.face === "koala" ? r*.38 : 0);
+      const oy = T.face === "pig" ? r*.34 : ((T.face === "koala" || T.face === "cow") ? r*.38 : 0);
       g.fillStyle = MC;
       g.beginPath(); g.ellipse(0, r*.245 + oy, r*.072, r*.092, 0, 0, 7); g.fill();
       g.fillStyle = TG;
       g.beginPath(); g.ellipse(0, r*.275 + oy, r*.04, r*.036, 0, 0, 7); g.fill();
-      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala"){
+      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
         g.fillStyle = "#5C463C";
         g.beginPath(); g.ellipse(0, r*.13, r*.06, r*.043, 0, 0, 7); g.fill();
       }
@@ -2109,9 +2175,9 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.moveTo(-r*.15, r*.2); g.lineTo(r*.15, r*.2); g.lineTo(0, r*.4);
     g.closePath(); g.fill();
   } else {
-    const my = T.face === "koala" ? r*.62 : (T.face === "pig" ? r*.58 : (T.face === "dog" ? r*.24 : r*.2));
+    const my = (T.face === "koala" || T.face === "cow") ? r*.62 : (T.face === "pig" ? r*.58 : (T.face === "dog" ? r*.24 : r*.2));
     // はな（ぶたは 大きな はなが すでに あるので えがかない）
-    if (T.face === "pig" || T.face === "koala"){
+    if (T.face === "pig" || T.face === "koala" || T.face === "cow"){
       g.strokeStyle = "#5C463C"; g.lineWidth = Math.max(1, r*.045); g.lineCap = "round";
       g.beginPath();
       g.moveTo(-r*.10, my - r*.02);
@@ -2127,7 +2193,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.closePath(); g.fill();
     }
     // ω くち（ぶたは 上で えがきおわっている）
-    if (T.face !== "pig" && T.face !== "koala"){
+    if (T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
       g.strokeStyle = "#5C463C"; g.lineWidth = Math.max(1, r*.045);
       g.lineCap = "round";
       g.beginPath();
