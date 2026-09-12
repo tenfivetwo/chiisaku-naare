@@ -55,7 +55,14 @@
   .card .sub { font-size: 10px; color: #a58e83; line-height: 1.2; margin-top: -1px; }
   #hud .card { min-width: 0; }
   .card.hi .val { color: #f2789a; }
-  #stage { position: relative; }
+  /* ばんめんの みぎに たての しんかの図を ならべる。
+     **たてでは なく よこの 予算を つかう**のが みそ。スマホの たては
+     いつも 足りて いないが（CLAUDE.md の 縦予算の はなし）、よこは あまって いる。
+     ばんめんが たかさで きまって いる 画面（ふつうの スマホ）では、
+     図を 足しても ばんめんは 1px も 小さく ならない。 */
+  #stage { position: relative; display: flex; align-items: flex-start; gap: 6px; }
+  canvas#ladderCv { display: block; border-radius: 14px; align-self: stretch;
+    box-shadow: 0 6px 16px rgba(180,150,160,.20); }
   canvas#game {
     display: block; border-radius: 20px;
     box-shadow: 0 10px 26px rgba(180,150,160,.28);
@@ -70,6 +77,7 @@
     overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
   #overlay.hidden { display: none; }
+  .hidden { display: none !important; }
   /* けっか画面は うすく：うしろの ばんめんが よく見えるように */
   #overlay.result {
     background: rgba(150,120,140,.10);
@@ -194,7 +202,14 @@
   #toast .sub { display: block; font-size: 10px; color: #a58e83; font-weight: 400; margin-top: 1px; }
   #chain { width: 100%; max-width: 430px; margin: 2px 0; }
   #chain canvas { width: 100%; height: auto; display: block; }
-  #foot { font-size: 11px; color: #a58e83; text-align: center; line-height: 1.6; }
+  /* ばんめんと 同じ はば(430px)で 折りかえす。
+     max-width を つけないと、ひろい画面で 文が 一行に のびて
+     **パネルの 左右に はみ出す**（#chain と 同じ しばりに そろえて ある）。 */
+  /* 1回 遊んだ あとだけ 出る ひとこと。えらび画面を 最初に 出さない かわり。 */
+  #overlay p.pickHint { font-size: 11px; color: #e08aa8; margin-top: -4px; }
+
+  #foot { font-size: 11px; color: #a58e83; text-align: center; line-height: 1.6;
+          width: 100%; max-width: 430px; box-sizing: border-box; }
 
   /* せまい画面では ゲーム画面を ゆうせん */
   @media (max-height: 900px){
@@ -269,6 +284,82 @@
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
   #sound:active { transform: translateY(2px); box-shadow: none; }
+  
+  /* ===== キャラ選択UI =====
+     #overlay の 中に 入れると、flex の つぶれで 文字が カードに
+     かさなる。ここは わざと 独立した レイヤー＋ふつうの ブロック積み。
+     flex / aspect-ratio を ここに 戻さないこと。 */
+  #charSelectOverlay {
+    position: fixed; inset: 0; z-index: 18;
+    background: linear-gradient(180deg,#fff2f7 0%,#f3f8ff 60%,#fff8ee 100%);
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: calc(18px + env(safe-area-inset-top)) 14px
+             calc(22px + env(safe-area-inset-bottom));
+  }
+  #charSelectOverlay .cs-inner {
+    max-width: 430px; margin: 0 auto; text-align: center;
+  }
+  #charSelectOverlay h2 {
+    margin: 0 0 4px; font-size: 18px; color: #f2789a; font-weight: 700;
+  }
+  #charSelectOverlay .hint {
+    margin: 0 0 12px; font-size: 12px; color: #a58e83;
+  }
+  #charGrid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .charCard {
+    background: rgba(255,255,255,.85);
+    border: 3px solid #fff; border-radius: 14px;
+    padding: 10px 6px 8px; cursor: pointer;
+    box-shadow: 0 2px 0 rgba(190,170,160,.25);
+    position: relative; transition: background .12s, border-color .12s;
+  }
+  .charCard:active { transform: translateY(2px); box-shadow: none; }
+  .charCard canvas {
+    display: block; margin: 0 auto;
+    width: 64px; height: 64px;          /* px 固定。% にしないこと */
+  }
+  .charCard .name {
+    margin-top: 6px; font-size: 11px; font-weight: 700; color: #7a6154;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .charCard.selected {
+    background: linear-gradient(135deg,#ffb3cd,#f78bad);
+    border-color: #f78bad; box-shadow: 0 4px 0 #dd6f92;
+  }
+  .charCard.selected .name { color: #fff; }
+  .charCard .checkmark {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; background: #fff; border-radius: 50%;
+    line-height: 20px; text-align: center;
+    font-size: 13px; font-weight: 700; color: #f2789a;
+    display: none;
+  }
+  .charCard.selected .checkmark { display: block; }
+  #charOrder {
+    margin: 14px auto 0; min-height: 54px;
+    background: rgba(255,255,255,.7); border: 2px solid #fff;
+    border-radius: 14px; padding: 7px 8px;
+  }
+  #charOrder .ttl { font-size: 10px; color: #a58e83; margin-bottom: 3px; }
+  #charOrder .row {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 3px; flex-wrap: nowrap;
+  }
+  #charOrder .slot { text-align: center; }
+  #charOrder .slot .nm {
+    font-size: 9px; color: #7a6154; margin-top: 1px;
+    white-space: nowrap;
+  }
+  #charOrder .arw { font-size: 10px; color: #d9b7c4; padding-bottom: 12px; }
+  #charOrder .empty { font-size: 11px; color: #c4aeb8; padding: 12px 0; }
+  #charSelectCount {
+    margin: 10px 0; font-size: 14px; font-weight: 700; color: #f2789a;
+  }
+  #charSelectBtn:disabled {
+    opacity: .5; cursor: not-allowed; box-shadow: 0 4px 0 #e0c0ca;
+  }
 </style>
 </head>
 <body>
@@ -298,14 +389,14 @@
 
   <div id="stage">
     <canvas id="game"></canvas>
+    <canvas id="ladderCv"></canvas>
     <div id="toast"><span class="in"></span></div>
     <div id="overlay">
       <h1>まめまる</h1>
-      <p class="sub2">〜 くっつくと ちいさくなる 〜</p>
       <canvas id="titleCv"></canvas>
       <p class="lead">
         おなじ子が くっつくと <b>ちいさく</b> なる。<br>
-        ひよこを <b>おおく みおくる</b>ほど 高とくてん。<br>
+        <span class="lastName">いちばん ちいさい子</span>を <b>おおく みおくる</b>ほど 高とくてん。<br>
         上のラインを こえないように！
       </p>
       <div id="modes">
@@ -315,15 +406,29 @@
       <p class="modeinfo" id="modeInfo"></p>
       <p class="myrec" id="myRec"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
-      <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ ひよこ ×2 は なかよく かけていく<br>
+      <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ <span class="lastName">いちばん小さい子</span> ×2 は なかよく かけていく<br>
   <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
       <button class="btn" id="startBtn">はじめる</button>
       <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
+      <button class="link" id="editCharBtn">まめまるを えらびなおす</button>
+      <p class="pickHint hidden" id="pickHint">すきな まめまる を 6つ えらべるよ ✨</p>
       <button class="link" id="calmBtn">えんしゅつを よわめる</button>
       <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
     </div>
   </div>
 
+
+  <!-- キャラ選択：#overlay とは べつの レイヤー（かさなり防止） -->
+  <div id="charSelectOverlay" class="hidden">
+    <div class="cs-inner">
+      <h2>すきな まめまる を 6つ えらんでね</h2>
+      <p class="hint">さきに えらんだ子ほど 大きくなります</p>
+      <div id="charGrid"></div>
+      <div id="charOrder"></div>
+      <div id="charSelectCount">えらんだ数: 0 / 6</div>
+      <button class="btn" id="charSelectBtn" disabled>これで はじめる</button>
+    </div>
+  </div>
 
   <div id="save" class="hidden">
     <div class="box">
@@ -349,17 +454,75 @@
 /* ============================================================
    キャラ定義（大きい順 → 合体するとひとつ下＝小さくなる）
    ============================================================ */
+
+// 【フェーズ1】全キャラクタのマスタリスト（復活含む）
+const ALL_CHARACTERS = [
+  { name:"らいおん", r:64, body:"#D99B45", shade:"#C07F2C", line:"#9C6520", ear:"none",  earIn:"#FFC9A8", face:"lion",   sm:"nyan",   eye:"sparkle", acc:"heart2",  fluff:9,  amp:.13, hi:"#F0BE7A", faceB:"#F7D089", faceS:"#E3AE55", faceL:"#B9812F" },
+  { name:"うし",     r:49, body:"#FFFDF8", shade:"#EDE7E0", line:"#C4BAB1", ear:"cow",   earIn:"#FFC2D2", face:"cow",    sm:"cow",    eye:"sparkle", acc:"note",    fluff:17, amp:.026, cowA:"#3B3330" },
+  { name:"こあら",   r:36, body:"#BFC6CD", shade:"#9FA8B2", line:"#7F8A95", ear:"koala", earIn:"#F4ECE6", face:"koala",  sm:"koala",  eye:"sparkle", acc:"note",    fluff:16, amp:.034 },
+  { name:"いぬ",     r:29, body:"#4A4340", shade:"#332E2C", line:"#241F1E", ear:"shiba", earIn:"#8A6B5A", face:"shiba",  sm:"tongue", eye:"sparkle", acc:"sparkle", fluff:14, amp:.03, hi:"#7A716C", tan:"#F3E2C8" },
+  { name:"ねこ",     r:26, body:"#FFFAF4", shade:"#F0E5DC", line:"#D6C4B6", ear:"cat",   earIn:"#FFAFC9", face:"cat",    sm:"nyan",   eye:"arc",     acc:"star",    fluff:14, amp:.034, mike:true, mikeA:"#F2A85E", mikeB:"#4A403C" },
+  { name:"ひよこ",   r:22, body:"#FFE889", shade:"#FBD25B", line:"#DDAE33", ear:"tuft",  earIn:"#FBD25B", face:"chick",  sm:"beak",   eye:"sparkle", acc:"note",    fluff:13, amp:.036 },
+  
+  // ウサギ：ブタより うすい ピンク。ΔE で はなれているか かならず はかること。
+  { name:"ウサギ",   r:32, body:"#F8CFEF", shade:"#EDB2E0", line:"#D28FC6", ear:"long",  earIn:"#FF9FC4", face:"cat",      sm:"bunny",  eye:"sparkle", acc:"star",   fluff:13, amp:.035, hi:"#FDE6F8" },
+  // パンダ：ear:"panda" は そんざいしない 種類で みみが 出ていなかった。
+  //         round＋earA（くろ）に する。リボンは この子だけ。
+  { name:"パンダ",   r:28, body:"#FFFEF8", shade:"#E8E6E2", line:"#B9B2AC", ear:"round", earIn:"#5A4F4A", face:"panda",    sm:"nihera", eye:"sparkle", acc:"note",   fluff:15, amp:.032, earA:"#3B3330", earL:"#241F1E", ribbon:true },
+  { name:"ブタ",     r:25, body:"#FFA9BB", shade:"#F2879D", line:"#D96A82", ear:"pig",   earIn:"#FFD3DC", face:"pig",      sm:"piggy",  eye:"sparkle", acc:"heart",  fluff:14, amp:.036, hi:"#FFC6D3" },
+
+  { name:"くま",     r:44, body:"#B98457", shade:"#9A6A42", line:"#7A5233", ear:"round", earIn:"#E7C9A8", face:"dog",      sm:"tooth",  eye:"sparkle", acc:"heart2", fluff:15, amp:.030, hi:"#D3A377" },
+  // ひつじ：もこもこ＝ベージュ、かお＝くろ、つの＝きいろ
+  // ひつじ：みみを くろ(#3B3330)に して いた ときは、大きな 黒い たれみみが
+  //         もこもこより 目立って、小さく すると パンダに 見えた。
+  //         つのも みみの かげに 隠れて いた。みみは 体より すこし こい
+  //         ベージュ＋内がわ うすピンクに して、つのを 前に 出して ある。
+  { name:"ひつじ",   r:40, body:"#E8D6AE", shade:"#CFB98C", line:"#A8926A", ear:"floppy",earIn:"#E8C7BC", face:"sheep",    sm:"grin",   eye:"sparkle", acc:"note",   fluff:11, amp:.13, puff:.26, faceR:.74, hi:"#F4E8CC",
+    faceB:"#FFFDF8", faceS:"#F0E8DA", faceL:"#C4B394", hornC:"#F7D157", hornL:"#C9992B", muzzle:"#FBF5EA", earA:"#C9AC80", earL:"#93764F" },
+  // めじろ：みどり。とりに 見せる 手がかりは くちばし・目のわっか・おばね の 3つ。
+  //   くちばしは まえ まっくろで ふとく、やじるしに 見えた → ほそく 灰茶に した。
+  //   おばねは 体の 内がわに あって 見えて いなかった → そとへ 出した。
+  { name:"めじろ",   r:27, body:"#9BCB52", shade:"#7FAE3A", line:"#61892A", ear:"none",  earIn:"#D8E9B0", face:"mejiro",   sm:"beak",   eye:"sparkle", acc:"note",   fluff:13, amp:.020, hi:"#C6E394",
+    beakA:"#8C5A5E", beakB:"#4A423C", beakLong:true, wingC:"#5F8F2A" },
+  // ぞう：とても うすい 水いろ。はなは 顔の 内がわで 完結させてある。
+  //   みみは 体と 明るさが 近くて シルエットに とけて いた（ただの 横長の かたまりに 見えた）ので
+  //   ひとだん こい 色に して、すこし 上に ずらして ある。
+  { name:"ぞう",     r:46, body:"#B7E4FA", shade:"#8CCAEE", line:"#5AA3D2", ear:"elephant", earIn:"#8FC9EC", face:"elephant", sm:"none", eye:"sparkle", acc:"note",   fluff:16, amp:.030, hi:"#D8F0FD", earA:"#6FB4DE", earL:"#4B90BE" },
+  { name:"きつね",   r:34, body:"#E8762B", shade:"#CB5C18", line:"#A2460F", ear:"fox",   earIn:"#F8D7B0", face:"fox",      sm:"nyan",   eye:"arc",     acc:"sparkle",fluff:11, amp:.028, hi:"#F59A55", tan:"#FFF6EC", earTip:"#3B3330" },
+  // たぬき：panda の 目のまわりを こげ茶に して つかう（リボンは なし）
+  //   patchC が 体と 近すぎて 顔ぜんたいが 茶いろの かたまりに 見えて いた。
+  //   ぶちを ぐっと 暗く し、くちの まわりに うすい マズルを 入れて 面を 割って ある。
+  { name:"たぬき",   r:36, body:"#9C8670", shade:"#7D6A58", line:"#5A4B3D", ear:"round", earIn:"#C9B39C", face:"panda",    sm:"tooth",  eye:"sparkle", acc:"star",   fluff:15, amp:.033, hi:"#B8A18A",
+    patchC:"#33271E", earA:"#5F4F41", earL:"#3C3027", muzzle:"#EFE2D2" },
+
+];
+
+// 大きさの はしご。CLAUDE.md の とおり いぬ/ねこ の 1.12 が いちばん つまっている。
+// キャラを 入れかえても この 数列は 変えない。だれが どの段に のるかだけを 変える。
+const SIZE_LADDER = [64, 49, 36, 29, 26, 22];
+
+// 【フェーズ2】ユーザーが選んだキャラのセット（localStorage で管理）
+let selectedTiers = null;
+// じぶんで えらんだ ことが あるか。false の あいだだけ
+// 1回 遊んだ あとに「えらべるよ」の ひとことを 出す。
+let customChars = false;
+
+// デフォルトセット
+const DEFAULT_TIERS = ALL_CHARACTERS.slice(0, 6); // 最初の6キャラ
+
 const TIERS = [
-  { name:"しろくま", r:64, body:"#FFF7F0", shade:"#F0DED2", line:"#C9A894", ear:"round", earIn:"#FFD6DC", face:"bear",   sm:"grin",   eye:"sparkle", acc:"heart2",  fluff:18, amp:.032 },
+  // らいおん：body/shade/line は「たてがみ」の色。うちがわの かおは faceB/faceS/faceL。
+  // amp を 大きく して でこぼこ 9つに すると、輪郭 そのものが たてがみに 見える。
+  { name:"らいおん", r:64, body:"#D99B45", shade:"#C07F2C", line:"#9C6520", ear:"none",  earIn:"#FFC9A8", face:"lion",   sm:"nyan",   eye:"sparkle", acc:"heart2",  fluff:9,  amp:.13, hi:"#F0BE7A", faceB:"#F7D089", faceS:"#E3AE55", faceL:"#B9812F" },
   { name:"うし",     r:49, body:"#FFFDF8", shade:"#EDE7E0", line:"#C4BAB1", ear:"cow",   earIn:"#FFC2D2", face:"cow",    sm:"cow",    eye:"sparkle", acc:"note",    fluff:17, amp:.026, cowA:"#3B3330" },
   { name:"こあら",   r:36, body:"#BFC6CD", shade:"#9FA8B2", line:"#7F8A95", ear:"koala", earIn:"#F4ECE6", face:"koala",  sm:"koala",  eye:"sparkle", acc:"note",    fluff:16, amp:.034 },
   { name:"いぬ",     r:29, body:"#4A4340", shade:"#332E2C", line:"#241F1E", ear:"shiba", earIn:"#8A6B5A", face:"shiba",  sm:"tongue", eye:"sparkle", acc:"sparkle", fluff:14, amp:.03, hi:"#7A716C", tan:"#F3E2C8" },
   { name:"ねこ",     r:26, body:"#FFFAF4", shade:"#F0E5DC", line:"#D6C4B6", ear:"cat",   earIn:"#FFAFC9", face:"cat",    sm:"nyan",   eye:"arc",     acc:"star",    fluff:14, amp:.034, mike:true, mikeA:"#F2A85E", mikeB:"#4A403C" },
   { name:"ひよこ",   r:22, body:"#FFE889", shade:"#FBD25B", line:"#DDAE33", ear:"tuft",  earIn:"#FBD25B", face:"chick",  sm:"beak",   eye:"sparkle", acc:"note",    fluff:13, amp:.036 },
 ];
-const LAST = TIERS.length - 1;
-// おとせるのは しろくま〜ねこ（大きい子ほど よく出る）
-const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // ひよこ は 合体でしか 生まれない
+let LAST = TIERS.length - 1;   // キャラえらびで 入れかわるので let
+// おとせるのは らいおん〜ねこ（大きい子ほど よく出る）
+let DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // ひよこ は 合体でしか 生まれない（フェーズ2で動的に変更されることがあるため let に変更）
 
 /* ============================================================
    ばめん
@@ -369,6 +532,12 @@ const DROP_POOL = [0,0,0, 1,1,1, 2,2,2, 3,3, 4,4];   // ひよこ は 合体で�
 // 620 に すると 埋まり率が 25%→30% に なり、狙いが 効くようになる（ρ = 0.47）。
 // 速く 連打するほど 得、という 構造も ここで 頭打ちに なる。
 const CW = 420, CH = 620;
+// みぎの しんかの図の はば（ばんめんと 同じ ものさし）。
+// ばんめんの CW/CH には いっさい さわらない ので、ゲームの 中身は 変わらない。
+const LAD_W = 56;
+// fitCanvas() は この すぐ下で 1回 よばれる ので、ここで 宣言して おく。
+// 下の renderLadder の そばに 置くと「初期化前に さわった」で 落ちる（TDZ）。
+let ladCtx = null;
 const WALL_L = 14, WALL_R = CW - 14, FLOOR0 = CH - 22;
 const CEIL = 0;                      // てんじょう（これより上へは 出られない）
 const FLOOR_MIN = 242;            // ゆかが上がりきるところ（DANGER 152 の 90px下）
@@ -384,21 +553,29 @@ function fitCanvas(){
   // まわりの UI の じっさいの 高さを はかって、のこりに キャンバスを おさめる
   let used = 0;
   for (const el2 of wrapEl.children){
-    if (el2.id === "stage" || el2.id === "save") continue;   // かさねて出すものは かぞえない
+    if (el2.id === "stage") continue;
+    // position:fixed / absolute で うかせている レイヤーは ながれの外。
+    // かぞえると 画面ぶんの 高さが 引かれて キャンバスが つぶれる。
+    const pos = getComputedStyle(el2).position;
+    if (pos === "fixed" || pos === "absolute") continue;
     used += el2.getBoundingClientRect().height + 6;
   }
   const cs = getComputedStyle(wrapEl);
   const padV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   const padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   const availH = Math.max(120, wrapEl.clientHeight - used - padV - 4);
-  const availW = Math.max(120, wrapEl.clientWidth - padH);
-  let scale = Math.min(availW / CW, availH / CH, 1.1);
+  // みぎの しんかの図（LAD_W）と すきま 6px の ぶんを ひいて から わりつける。
+  // ばんめんの CW/CH は さわらない（＝物理も スコアも 一切 変わらない）。
+  // 変わるのは 画面に うつる 大きさ だけ。
+  const availW = Math.max(120, wrapEl.clientWidth - padH - 6);
+  let scale = Math.min(availW / (CW + LAD_W), availH / CH, 1.1);
   scale = Math.max(scale, .18);          // はみ出さないよう 下げきる
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = CW * dpr; cv.height = CH * dpr;
   cv.style.width = (CW * scale) + "px";
   cv.style.height = (CH * scale) + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  initLadder(scale);
 }
 window.addEventListener("resize", fitCanvas);
 window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 250));
@@ -537,7 +714,7 @@ const MISSION_DEFS = [
           return { id:"collect", need:n, prog:0, text:`どうぶつを ${n}にん あつめる` }; },
   () => { const n = pick([8,11,14]);
           return { id:"pop", need:n, prog:0, text:`ひよこを ${n}かい みおくる` }; },
-  // つくる おだいは しろくま いがいの ぜんぶを たいしょうに する
+  // つくる おだいは いちばん大きい子 いがいの ぜんぶを たいしょうに する
   () => { const k = 1 + ((Math.random()*5)|0), n = pick([12,16,20]);
           return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}にん つくる` }; },
   () => { const n = pick([45,60,80]);
@@ -547,7 +724,7 @@ const MISSION_DEFS = [
   () => { let nb = 0;
           for (const b of balls) if (b.tier === 0) nb++;
           const n = Math.max(pick([4,5]), nb + 1);              // いまより ふやす
-          return { id:"bear", need:n, prog:0, text:`しろくまを ${n}にん ならべる` }; },
+          return { id:"bear", need:n, prog:0, text:`${TIERS[0].name}を ${n}にん ならべる` }; },
   () => { const n = pick([2,3]);
           return { id:"chain", need:n, prog:0, text:`4れんさ いじょうを ${n}かい だす` }; },
 ];
@@ -662,7 +839,8 @@ function newBall(tier, x, y, vx, vy){
     surpT: 0, surpDur: 1, surpWait: 0, surpQ: 0, surpKind: 1, surpKindQ: 1,
     sq: 0, sqv: 0,
     phase: rnd(0, Math.PI*2),
-    danger: 0
+    danger: 0,
+    overLine: false      // ラインを こえて おちついて いるか（列ごとの 落下判定に つかう）
   };
 }
 
@@ -1412,6 +1590,39 @@ function stepFx(dt){
 /* ============================================================
    キャラ描画（ふわふわ）
    ============================================================ */
+// もこもこ輪郭（ひつじ用）。正弦波は 山を ふやすほど 細く 深く なって
+// とがって 見える（ふかさ÷はば が 0.6 を こえると ギザギザ）。
+// かわりに まるを ぐるっと ならべて、となりと 交わる ところで つないで いく。
+// こうすると 山が 円弧に なるので ふかさ÷はば が 0.24 に なり もこもこ する。
+function puffPath(g, r, n, rpFrac, phase){
+  // phase を まわす 角に つかっては いけない。
+  // 正弦波の 輪郭では phase は 山が ゆっくり 波うつ ための ずれ だが、
+  // ここで 同じ ことを すると まる 11こが まとめて まわり、
+  // からだごと 回転して 見える（いちど やって しまった）。
+  // いきた かんじは 「まるの 大きさが すこし ふくらむ」 で 出す。
+  const rp = r * rpFrac * (1 + .055*Math.sin(phase));
+  const rc = r - rp;              // そとの はしは いつも r
+  const D  = Math.PI*2 / n;
+  const d  = 2 * rc * Math.sin(D/2);
+  if (rp <= d/2){                 // つながらない ときは 正弦波に にげる
+    fluffPath(g, r, n, rpFrac*.5, phase);
+    return;
+  }
+  const phi = Math.acos((d/2) / rp);   // 交点の 中心からの ずれ角
+  const H = Math.PI/2;
+  g.beginPath();
+  for (let i = 0; i < n; i++){
+    const th = i*D;                    // ← phase を たさない
+    const cx = Math.cos(th)*rc, cy = Math.sin(th)*rc;
+    // となりの 中心への むきは th ± (D/2 + 90度)。
+    // そとがわの 交点は そこから phi を 「ひいた」 ほう（数値で たしかめた）。
+    const a0 = th - D/2 - H + phi;     // まえの まるとの 交点
+    const a1 = th + D/2 + H - phi;     // つぎの まるとの 交点
+    g.arc(cx, cy, rp, a0, a1);
+  }
+  g.closePath();
+}
+
 function fluffPath(g, r, bumps, amp, phase){
   // でこぼこ 1つあたり 4点あれば なめらかに 見える（ちいさい子は 点を へらす）
   const steps = Math.max(24, Math.min(96, Math.round(Math.max(r * 1.0, bumps * 4))));
@@ -1449,10 +1660,37 @@ function noteG(g, x, y, s){
   g.closePath(); g.fill();
 }
 
+/* ============================================================
+   かおの「くち・はな」の きまり。**ここが 唯一の 出どころ。**
+
+   まえは「この かおは くちを えがかない」の 判定が
+     ①ふだんの かお ②びっくりの かお ③せり上がりの かお
+   の 3か所に ばらばらに 書いて あって、表情を ふやすたびに
+   ぞうに 口が 生えた（`T.face === "elephant"` の 書き忘れ）。
+   表情を ふやす ときは、この 関数を 呼ぶだけ に すること。
+   あたらしく「口の ない子」を 出す ときも ここに 1行 足せば すむ。
+   ============================================================ */
+function mouthRule(T){
+  // くちを いっさい えがかない かお（ぞう＝はなが くちの ばしょを とおる）
+  const noMouth = (T.face === "elephant");
+  // すでに 大きな はなが あって、はなの すじだけ 足す かお
+  const bigNose = (T.face === "pig" || T.face === "koala" || T.face === "cow");
+  return {
+    noMouth,
+    bigNose,
+    // ちいさな 黒い はなの 点を 置かない かお
+    noNoseDot: noMouth || bigNose || T.face === "cat" || T.face === "dog",
+  };
+}
+
 /* ちいさく にっこりした 口もと */
 function drawSmileMouth(g, T, r){
+  // 口の ない かおは ここで 打ち切る。T.sm の 書きまちがいでも 口は 生えない。
+  if (mouthRule(T).noMouth) return;
   g.lineCap = "round"; g.lineJoin = "round";
   switch (T.sm){
+
+    case "none": break;     // 口を えがかない（mouthRule でも 止めて ある）
 
     case "grin": {          // しろくま：ちいさく ぱくっ
       const my = r*.17, w = r*.135, h = r*.155;
@@ -1570,20 +1808,39 @@ function drawSmileMouth(g, T, r){
       break;
     }
 
-    default: {              // ひよこ：くちばし ちょこっと ぱか
+    default: {              // ひよこ／めじろ：くちばし ちょこっと ぱか
       const my = r*.16;
-      g.fillStyle = "#E07A20";
+      // beakA/beakB で 色を 変えられる（めじろは くろ）
+      // した（あいた ところ）。ほそながい くちばしの 子は はばも ほそく する。
+      const bw = T.beakLong ? .062 : .115, bh = T.beakLong ? .17 : .25;
+      g.fillStyle = T.beakA || "#E07A20";
       g.beginPath();
-      g.moveTo(-r*.115, my + r*.075);
-      g.lineTo(r*.115, my + r*.075);
-      g.quadraticCurveTo(0, my + r*.25, -r*.115, my + r*.075);
+      g.moveTo(-r*bw, my + r*.075);
+      g.lineTo(r*bw, my + r*.075);
+      g.quadraticCurveTo(0, my + r*bh, -r*bw, my + r*.075);
       g.closePath(); g.fill();
-      g.fillStyle = "#FF9E3D";
+      g.fillStyle = T.beakB || "#FF9E3D";
       g.beginPath();
-      g.moveTo(-r*.135, my + r*.06);
-      g.lineTo(r*.135, my + r*.06);
-      g.lineTo(0, my - r*.13);
-      g.closePath(); g.fill();
+      if (T.beakLong){
+        // とりらしく ほそく、すこし 下に そらせる。
+        // まえは はば .085r・ながさ .30r・まっくろ で、かおの まんなかに
+        // くろい やじるしが ある ように 見えて いた。ほそく 短く して、
+        // ふちを なめらかな 曲線に する と くちばしに 見える。
+        g.moveTo(-r*.058, my - r*.09);
+        g.quadraticCurveTo(-r*.030, my + r*.10, r*.005, my + r*.21);
+        g.quadraticCurveTo( r*.045, my + r*.09, r*.058, my - r*.09);
+        g.closePath(); g.fill();
+        g.strokeStyle = T.beakA || "#E07A20";
+        g.lineWidth = Math.max(1, r*.024);
+        g.beginPath();
+        g.moveTo(-r*.058, my - r*.09); g.lineTo(r*.058, my - r*.09);
+        g.stroke();
+      } else {
+        g.moveTo(-r*.135, my + r*.06);
+        g.lineTo(r*.135, my + r*.06);
+        g.lineTo(0, my - r*.13);
+        g.closePath(); g.fill();
+      }
       break;
     }
   }
@@ -1688,6 +1945,7 @@ function drawShock2(g, r, a, phase){
 
 function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   const T = TIERS[tier];
+  const MR = mouthRule(T);      // くち・はなの きまり（唯一の 出どころ。上の 関数を 見ること）
   sm = sm || 0;
   const suv = su || 0;
   const kind = sk || 1;
@@ -1705,10 +1963,13 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   g.lineWidth = Math.max(1, r*0.045);
   g.strokeStyle = T.line;
 
+  // みみの そとがわは ふつう body。earA が あれば そちらを つかう
+  // （ぱんだの 黒いみみ など）。earL で ふちの 色も 変えられる。
+  if (T.earL){ g.strokeStyle = T.earL; }
   if (T.ear === "round"){
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.62, -r*.68);
-      g.fillStyle = T.body;
+      g.fillStyle = T.earA || T.body;
       g.beginPath(); g.arc(0,0, r*.34, 0, 7); g.fill(); g.stroke();
       g.fillStyle = T.earIn;
       g.beginPath(); g.arc(0, r*.04, r*.17, 0, 7); g.fill();
@@ -1717,7 +1978,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   } else if (T.ear === "long"){
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.30, -r*1.12); g.rotate(s*0.13);
-      g.fillStyle = T.body;
+      g.fillStyle = T.earA || T.body;
       g.beginPath(); g.ellipse(0,0, r*.17, r*.78, 0, 0, 7); g.fill(); g.stroke();
       g.fillStyle = T.earIn;
       g.beginPath(); g.ellipse(0, r*.02, r*.085, r*.58, 0, 0, 7); g.fill();
@@ -1726,7 +1987,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   } else if (T.ear === "cat"){
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.56, -r*.62); g.rotate(s*0.25);
-      g.fillStyle = (T.mike && s > 0) ? T.mikeA : T.body;   // みけは 右みみが オレンジ
+      g.fillStyle = (T.mike && s > 0) ? T.mikeA : (T.earA || T.body);   // みけは 右みみが オレンジ
       g.beginPath();
       g.moveTo(-r*.26, r*.2); g.lineTo(0, -r*.36); g.lineTo(r*.26, r*.2);
       g.closePath(); g.fill(); g.stroke();
@@ -1752,7 +2013,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     for (const s of [-1, 1]){
       const dark = (s > 0);
       g.save(); g.translate(s*r*.80, -r*.30); g.scale(s, 1); g.rotate(.34);
-      g.fillStyle   = dark ? (T.cowA || "#3B3330") : T.body;
+      g.fillStyle   = dark ? (T.cowA || "#3B3330") : (T.earA || T.body);
       g.strokeStyle = dark ? (T.cowA || "#3B3330") : T.line;
       g.beginPath(); g.ellipse(0, 0, r*.38, r*.20, 0, 0, 7); g.fill(); g.stroke();
       g.fillStyle = dark ? "#D98FA6" : T.earIn;
@@ -1772,14 +2033,14 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
         if (i === 0) g.moveTo(x,y); else g.lineTo(x,y);
       }
       g.closePath(); g.fill(); g.stroke();
-      g.fillStyle = T.body;
+      g.fillStyle = T.earA || T.body;
       g.beginPath(); g.arc(0, 0, r*.28, 0, 7); g.fill();
       g.restore();
     }
   } else if (T.ear === "pig"){
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.58, -r*.66); g.rotate(s*0.34);
-      g.fillStyle = T.body;
+      g.fillStyle = T.earA || T.body;
       g.beginPath();
       g.moveTo(-r*.26, r*.20);
       g.quadraticCurveTo(-r*.24, -r*.20, r*.02, -r*.30);
@@ -1797,7 +2058,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     // しばの 立ちみみ。ねこより はば広で、さきが すこし まるい
     for (const s of [-1, 1]){
       g.save(); g.translate(s*r*.58, -r*.66); g.rotate(s*0.18);
-      g.fillStyle = T.body;
+      g.fillStyle = T.earA || T.body;
       g.beginPath();
       g.moveTo(-r*.30, r*.22);
       g.quadraticCurveTo(-r*.20, -r*.30, 0, -r*.40);
@@ -1811,15 +2072,76 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.closePath(); g.fill();
       g.restore();
     }
-  } else if (T.ear === "floppy"){
+  } else if (T.ear === "elephant"){
+    // ぞうの おおきな たれみみ。
+    // ここは 2どしくじっている ので 理由を のこす：
+    //   1) そとの はしが 1.02r しか なく、ほとんどが からだに かさなって いた
+    //   2) earA を body と ほぼ 同じ 色に して いたので とけて 見えなかった
+    // → はしを たれみみ(floppy) と 同じ 1.22r まで 出し、色も はっきり 分ける。
     for (const s of [-1, 1]){
-      g.save(); g.translate(s*r*.92, -r*.34); g.rotate(s*0.42);
+      g.save(); g.translate(s*r*.80, -r*.12); g.scale(s, 1);
+      g.fillStyle = T.earA || T.shade;
+      g.beginPath();
+      // 上は ひろく、下に いくほど すぼんで たれる
+      g.moveTo(-r*.26, -r*.56);
+      g.quadraticCurveTo(r*.34, -r*.62, r*.42, -r*.14);
+      g.quadraticCurveTo(r*.48,  r*.30, r*.16,  r*.56);
+      g.quadraticCurveTo(-r*.06, r*.70, -r*.20, r*.46);
+      g.quadraticCurveTo(-r*.30, r*.10, -r*.26, -r*.56);
+      g.closePath(); g.fill(); g.stroke();
+      // みみの うちがわ（ふちを のこして ひとまわり 小さく）
       g.fillStyle = T.earIn;
-      g.beginPath(); g.ellipse(0,0, r*.29, r*.5, 0, 0, 7); g.fill(); g.stroke();
+      g.beginPath();
+      g.moveTo(-r*.14, -r*.42);
+      g.quadraticCurveTo(r*.22, -r*.46, r*.28, -r*.10);
+      g.quadraticCurveTo(r*.32,  r*.22, r*.08,  r*.40);
+      g.quadraticCurveTo(-r*.06, r*.48, -r*.12, r*.30);
+      g.quadraticCurveTo(-r*.18, r*.04, -r*.14, -r*.42);
+      g.closePath(); g.fill();
+    g.restore();
+    }
+  } else if (T.ear === "fox"){
+    // きつねの みみ。しばより 高く ほそく、さきが とがって いて 先が くろい。
+    // しばの まるい 立ちみみと はっきり 分ける ための かたち。
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.52, -r*.74); g.rotate(s*0.20);
+      g.fillStyle = T.earA || T.body;
+      g.beginPath();
+      g.moveTo(-r*.24, r*.26);
+      g.lineTo(0, -r*.62);
+      g.lineTo(r*.24, r*.26);
+      g.closePath(); g.fill(); g.stroke();
+      // さきの くろ
+      g.fillStyle = T.earTip || "#3B3330";
+      g.beginPath();
+      g.moveTo(-r*.105, -r*.24);
+      g.lineTo(0, -r*.62);
+      g.lineTo(r*.105, -r*.24);
+      g.closePath(); g.fill();
+      // 内がわ
+      g.fillStyle = T.earIn;
+      g.beginPath();
+      g.moveTo(-r*.115, r*.18);
+      g.lineTo(0, -r*.28);
+      g.lineTo(r*.115, r*.18);
+      g.closePath(); g.fill();
+      g.restore();
+    }
+  } else if (T.ear === "floppy"){
+    // そと(earA)＋内がわ(earIn) の 2色。1色の ぬりつぶしに すると、
+    // 色が こいとき「大きな 黒い かたまり」に なって 体より 目立った。
+    // 内がわは そとがわへ ずらして 置く。ここは 体の うしろに 描かれるので、
+    // まんなかに 置くと 体に かくれて 見えない。
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.90, -r*.30); g.scale(s, 1); g.rotate(0.42);
+      g.fillStyle = T.earA || T.earIn;
+      g.beginPath(); g.ellipse(0,0, r*.26, r*.45, 0, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = T.earIn;
+      g.beginPath(); g.ellipse(r*.055, r*.02, r*.145, r*.29, 0, 0, 7); g.fill();
       g.restore();
     }
   } else if (T.ear === "tuft"){
-    g.fillStyle = T.body; g.strokeStyle = T.line;
+    g.fillStyle = T.earA || T.body; g.strokeStyle = T.line;
     for (const o of [-.22, .22]){
       g.beginPath();
       g.arc(r*o, -r*1.0, r*.125, 0, 7);
@@ -1834,7 +2156,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.quadraticCurveTo(r*.28, -r*1.17, r*.23, -r*1.08);
     g.stroke();
     g.restore();
-    g.fillStyle = T.body; g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*0.045);
+    g.fillStyle = T.earA || T.body; g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*0.045);
     g.beginPath(); g.arc(0, -r*.98, r*.115, 0, 7); g.fill(); g.stroke();
   }
 
@@ -1846,18 +2168,202 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   g.fillStyle = grd;
   g.strokeStyle = T.line;
   g.lineWidth = Math.max(1, r*0.05);
-  fluffPath(g, r, T.fluff, T.amp, phase);
+  // puff が あれば まるを ならべた もこもこ輪郭。なければ これまでの 正弦波。
+  if (T.puff) puffPath(g, r, T.fluff, T.puff, phase);
+  else        fluffPath(g, r, T.fluff, T.amp, phase);
   g.fill(); g.stroke();
 
   // ぱんだ模様（まるっこく、ちょっと ちいさめ）
+  // ひつじ：もこもこ（＝体の輪郭）は ベージュ のまま、
+  // その 内がわに くろい かおの 円を のせる。つくりは らいおんと 同じ。
+  // つのは かおの 円より さきに えがいて、根もとを 隠す。
+  // きつね：しばの かおを 色ちがいで つかうと 犬にしか 見えない。
+  //   ちがいは 3つ。たてに ながい とがった マズル／ほおの ふさ毛／
+  //   まろまゆを つけない こと。まろまゆは しばの いちばんの とくちょう なので
+  //   きつねに つけると そこで 犬に 見える。
+  if (T.face === "fox"){
+    const TAN = T.tan || "#FFF2E2";
+    g.fillStyle = TAN;
+    // ほおの ふさ毛：ふちに そって とがった 3まいずつ
+    for (const s of [-1,1]){
+      g.save(); g.translate(s*r*.60, r*.10); g.scale(s, 1);
+      for (const k of [-1, 0, 1]){
+        g.save(); g.rotate(k*0.36 + 0.10);
+        g.beginPath();
+        g.moveTo(0, -r*.13);
+        g.quadraticCurveTo(r*.26, -r*.07, r*.40, 0);
+        g.quadraticCurveTo(r*.26,  r*.07, 0,  r*.13);
+        g.closePath(); g.fill();
+        g.restore();
+      }
+      g.restore();
+    }
+    // たてに ながい マズル（しばの まるい ものと 分ける）
+    g.beginPath();
+    g.moveTo(-r*.27, r*.16);
+    g.quadraticCurveTo(-r*.30, r*.52, 0, r*.70);
+    g.quadraticCurveTo(r*.30, r*.52, r*.27, r*.16);
+    g.quadraticCurveTo(0, r*.04, -r*.27, r*.16);
+    g.closePath(); g.fill();
+    // ひたいの 白い すじ
+    g.save(); g.globalAlpha = .45;
+    g.beginPath(); g.ellipse(0, -r*.34, r*.13, r*.26, 0, 0, 7); g.fill();
+    g.restore();
+  }
+
+  if (T.face === "sheep"){
+    // かおの 大きさは amp では なく faceR で きめる。
+    // もこもこ輪郭に した ことで amp は 輪郭に つかわれなく なった ため。
+    const R = r * (T.faceR || (1 - 2*T.amp));
+    // つの（きいろ／うずまき）
+    for (const sd of [-1, 1]){
+      g.save(); g.translate(sd*R*.72, -R*.52); g.scale(sd, 1);
+      g.lineCap = "round";
+      const hp = () => {
+        g.beginPath();
+        g.moveTo(-R*.06, -R*.10);
+        g.quadraticCurveTo(R*.34, -R*.06, R*.30, R*.22);
+        g.quadraticCurveTo(R*.26, R*.44, R*.04, R*.36);
+      };
+      g.strokeStyle = T.hornL || "#C9992B";      // ふち
+      g.lineWidth = Math.max(1.4, r*.155); hp(); g.stroke();
+      g.strokeStyle = T.hornC || "#F7D157";      // きいろ 本体
+      g.lineWidth = Math.max(1, r*.105);  hp(); g.stroke();
+      g.restore();
+    }
+    // かおの 円（くろ）
+    const gf = g.createRadialGradient(-R*.28, -R*.32, R*.1, 0, 0, R*1.05);
+    gf.addColorStop(0, T.faceB);
+    gf.addColorStop(.45, T.faceB);
+    gf.addColorStop(1, T.faceS);
+    g.fillStyle = gf; g.strokeStyle = T.faceL; g.lineWidth = Math.max(1, r*.038);
+    g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.stroke();
+    // マズル（うすい ベージュ）
+    g.fillStyle = T.muzzle || "#E9D9BC";
+    g.beginPath(); g.ellipse(0, r*.30, r*.26, r*.17, 0, 0, 7); g.fill();
+  }
+
+  // めじろ：とりだと わかる 手がかりを 3つ かさねる。
+  //   おばね（うしろに ちょこん）／はね（ひよこと 同じ かたち）／
+  //   目のまわりの 細い 白わっか。わっかを 太くすると 目玉が 大きく 見えて
+  //   とりに 見えなくなるので ほそいまま にする こと。
+  if (T.face === "mejiro"){
+    g.save();
+    g.fillStyle = T.wingC || T.shade; g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*.05);
+    // おばね：ひだり下へ ななめに 出す。
+    // まえは (-.62r, .52r) から 内がわ むきに はえて いて、さきが 体の 中で
+    // 終わって いた（＝ぜんぜん 見えて いなかった）。いまは 45度 そとむきに 出し、
+    // いちばん さきが 中心から 1.19r。**1.22r を こえない こと**（となりの子に かぶる）。
+    g.save(); g.translate(-r*.56, r*.42); g.rotate(Math.PI*0.82);
+    for (const k of [-1, 0, 1]){
+      g.save(); g.rotate(k*0.22);
+      g.beginPath();
+      g.moveTo(0, -r*.075);
+      g.quadraticCurveTo(r*.34, -r*.045, r*.50, 0);
+      g.quadraticCurveTo(r*.34, r*.045, 0, r*.075);
+      g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
+    g.restore();
+    // はね：ほおの 下、体の ふちの すこし 内がわに たたんで つける。
+    // ふちの ぎりぎりに 置くと もこもこ輪郭に まぎれて 見えない。
+    for (const s2 of [-1,1]){
+      g.save(); g.translate(s2*r*.72, r*.46); g.scale(s2, 1); g.rotate(.60);
+      g.beginPath();
+      g.moveTo(-r*.03, -r*.15);
+      g.quadraticCurveTo(r*.22, -r*.10, r*.19, r*.13);
+      g.quadraticCurveTo(r*.10, r*.23, -r*.04, r*.12);
+      g.closePath(); g.fill(); g.stroke();
+      // はねの すじ 2本
+      g.globalAlpha = .5; g.lineWidth = Math.max(1, r*.026);
+      g.beginPath();
+      g.moveTo(r*.01, -r*.07); g.quadraticCurveTo(r*.14, -r*.01, r*.14, r*.09);
+      g.moveTo(-r*.01, r*.01); g.quadraticCurveTo(r*.09, r*.05, r*.09, r*.13);
+      g.stroke(); g.globalAlpha = 1;
+      g.restore();
+    }
+    // おなかの うすい ところ
+    g.fillStyle = T.hi || T.shade;
+    g.beginPath(); g.ellipse(0, r*.46, r*.40, r*.24, 0, 0, 7); g.fill();
+    g.restore();
+    // 目のまわりの 白わっか（ほそく／目に ぴったり）
+    g.strokeStyle = "#FFFFFF"; g.lineWidth = Math.max(1, r*.05);
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.arc(s2*r*.33, -r*.02, r*.185, 0, 7); g.stroke();
+    }
+  }
+
+  // ぞう：はなは 顔の 内がわで 完結させる。
+  // 外に のばすと ぎゅうぎゅうの ばんめんで となりと ぶつかって 読めなくなる
+  // （CLAUDE.md に ある とおり、こあらの はなと 同じ かんがえ方）。
+  if (T.face === "elephant"){
+    // ぞうの はな。まえは ただの かたまりで ぞうに 見えなかった。
+    // ぞうらしさは「上が ふとく 下が ほそい」「しわの すじ」「さきが まく」の 3つ。
+    // 外に のばすと ぎゅうぎゅうの ばんめんで となりと ぶつかるので
+    //   たては r*.74 まで、よこは r*.30 まで に おさめて ある。
+    g.save();
+    g.lineCap = "round"; g.lineJoin = "round";
+
+    // はなの すじ道（上から さきへ）。さきは みぎに まく。
+    const P = [
+      [ 0.00, 0.02], [-0.05, 0.26], [ 0.00, 0.48],
+      [ 0.10, 0.63], [ 0.21, 0.57]
+    ].map(([x,y]) => [x*r, y*r]);
+
+    const seg = (i, w, col) => {
+      g.strokeStyle = col; g.lineWidth = Math.max(1, w);
+      g.beginPath();
+      g.moveTo(P[i][0], P[i][1]);
+      g.quadraticCurveTo(P[i+1][0], P[i+1][1], P[i+2][0], P[i+2][1]);
+      g.stroke();
+    };
+
+    // ふち → 本体 の 順で かさねて、ふとさを だんだん ほそく する
+    for (const [ci, cw] of [[0, .34], [2, .25]]){
+      seg(ci, r*cw, T.line);
+    }
+    for (const [ci, cw] of [[0, .27], [2, .18]]){
+      seg(ci, r*cw, T.shade);
+    }
+    // さきの まき
+    g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*.17);
+    g.beginPath(); g.moveTo(P[3][0], P[3][1]); g.lineTo(P[4][0], P[4][1]); g.stroke();
+    g.strokeStyle = T.shade; g.lineWidth = Math.max(1, r*.11);
+    g.beginPath(); g.moveTo(P[3][0], P[3][1]); g.lineTo(P[4][0], P[4][1]); g.stroke();
+
+    // しわの すじ（ぞうの はなだと わかる いちばんの 手がかり）
+    g.strokeStyle = T.line; g.globalAlpha = .55;
+    const wr = [[0.13, .125], [0.28, .115], [0.43, .10], [0.56, .085]];
+    for (const [ty, hw] of wr){
+      const y = ty*r;
+      const x = (ty < .3 ? -0.035 : (ty - .30) * 0.30) * r;
+      g.lineWidth = Math.max(1, r*.026);
+      g.beginPath();
+      g.moveTo(x - hw*r, y - r*.02);
+      g.quadraticCurveTo(x, y + r*.03, x + hw*r, y - r*.02);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    g.restore();
+  }
+
   if (T.face === "panda"){
-    g.fillStyle = "#3B3330";
+    // マズル（muzzle:"..." を 持つ子だけ）。たぬき用。
+    // こい ぶち＋こい 体 だけだと 顔ぜんたいが 茶の かたまりに 見えるので、
+    // くちの まわりだけ 明るく して 面を 割る。ぶちより 先に 描く（ぶちが 上）。
+    if (T.muzzle){
+      g.fillStyle = T.muzzle;
+      g.beginPath(); g.ellipse(0, r*.29, r*.34, r*.22, 0, 0, 7); g.fill();
+    }
+    // patchC で 目のまわりの 色を 変えられる（たぬきは こげ茶）
+    g.fillStyle = T.patchC || "#3B3330";
     for (const s of [-1,1]){
       g.save(); g.translate(s*r*.355, r*.012); g.rotate(s*0.2);
       g.beginPath(); g.ellipse(0,0, r*.325, r*.36, 0, 0, 7); g.fill();
       g.restore();
     }
-    // みみの リボン
+    // みみの リボン（ribbon:true の子だけ）
+    if (T.ribbon){
     g.save();
     g.translate(r*.78, -r*.92); g.rotate(-.35);
     g.fillStyle = "#FF9EC0";
@@ -1866,6 +2372,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.fillStyle = "#FFC2D8";
     g.beginPath(); g.arc(0, 0, r*.055, 0, 7); g.fill();
     g.restore();
+    }
   }
   // みけの ぶち。
   // 目（eyeX=r*.33, eyeY=-r*.02）に かからない ところにだけ 置く。
@@ -1878,6 +2385,33 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.fillStyle = T.mikeB;                                   // くろ：左うえ（すこし ちいさめ）
     g.beginPath(); g.ellipse(-r*.40, -r*.60, r*.28, r*.23, -.26, 0, 7); g.fill();
     g.restore();
+  }
+  // らいおん：たてがみ（＝体の輪郭）の 内がわに、なめらかな かおの 円を のせる。
+  // 円の 大きさは r*(1-2*amp) ＝ たてがみの「谷」と ちょうど 接する 大きさ。
+  // ここを 大きく すると 谷から かおが はみ出し、小さく すると ほっぺが たてがみに 乗る。
+  if (T.face === "lion"){
+    const R = r * (1 - 2*T.amp);
+    // みみ（かおの 円より 先に えがいて、下半分を 隠す）
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.44, -r*.66);
+      g.fillStyle = T.faceB; g.strokeStyle = T.faceL; g.lineWidth = Math.max(1, r*.035);
+      g.beginPath(); g.arc(0, 0, r*.155, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = T.earIn;
+      g.beginPath(); g.arc(0, r*.02, r*.08, 0, 7); g.fill();
+      g.restore();
+    }
+    // かおの 円
+    const gf = g.createRadialGradient(-R*.3, -R*.35, R*.1, 0, 0, R*1.05);
+    gf.addColorStop(0, "#ffffff");
+    gf.addColorStop(.35, T.faceB);
+    gf.addColorStop(1, T.faceS);
+    g.fillStyle = gf; g.strokeStyle = T.faceL; g.lineWidth = Math.max(1, r*.038);
+    g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.stroke();
+    // マズル（ふたこぶ）
+    g.fillStyle = "#FFF3DC";
+    for (const s of [-1, 1]){
+      g.beginPath(); g.ellipse(s*r*.135, r*.275, r*.175, r*.145, 0, 0, 7); g.fill();
+    }
   }
   // うしの ぶち：顔の みぎ 4わりほどを まとめて 黒く する。
   // そとがわの ふちは もこもこの 輪郭を そのまま なぞる。丸で 近似すると
@@ -2029,12 +2563,21 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   // め
   const eyeX = r*.33, eyeY = -r*.02;
   const eh = r*.135 * blinkAmt;
+  // とじた目（まばたき）と にっこり目（^^）は「線」なので、
+  // くらい ぶちの 上だと 消える。ぱんだ・たぬきは じっさい まばたきの あいだ
+  // 目が まるごと 消えて いた（ふだんの 目は 白目＋黒目 なので 気づかなかった）。
+  // ぶちの 上に 目が のる かおだけ 白い 線に する。
+  //   ぱんだ face … 両目とも くろい ぶちの 上（たぬきも これ）
+  //   うし   face … ぶちは 顔の みぎ 4わり なので みぎ目 だけ
+  //   しば   face … 目の まわりは まろまゆ（明るい）なので 濃い線の まま
+  const lidColor = (s2) =>
+    (T.face === "panda" || (T.face === "cow" && s2 > 0)) ? "#FFFFFF" : "#4A3A33";
   for (const s2 of [-1,1]){
     const ex = s2*eyeX;
     const arc = happy && (T.eye === "arc" || (T.eye === "wink" && s2 < 0));
     if (arc){
       // にっこり ^ ^（ふとめ・やわらかいカーブ）
-      g.strokeStyle = (T.face === "panda") ? "#FFFFFF" : "#4A3A33";
+      g.strokeStyle = lidColor(s2);
       g.lineWidth = Math.max(1.3, r*.075);
       g.lineCap = "round";
       g.beginPath();
@@ -2042,7 +2585,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.quadraticCurveTo(ex, eyeY - r*.105, ex + r*.14, eyeY + r*.075);
       g.stroke();
     } else if (!happy && blinkAmt < .18){
-      g.strokeStyle = "#4A3A33"; g.lineWidth = Math.max(1, r*.055);
+      g.strokeStyle = lidColor(s2); g.lineWidth = Math.max(1, r*.055);
       g.beginPath(); g.arc(ex, eyeY + r*.02, r*.12, Math.PI*1.12, Math.PI*1.88); g.stroke();
     } else if (shock && kind === 2){
       // せり上がり：まんまるの しろめ＋てんてん（上を見てる）
@@ -2093,6 +2636,8 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.moveTo(-r*.13, -r*.03); g.lineTo(r*.13, -r*.03); g.lineTo(0, r*.15);
       g.closePath(); g.fill();
       g.restore();
+    } else if (MR.noMouth){
+      // 口の ない かお（ぞう）。mouthRule を 見ること
     } else {
       g.strokeStyle = MC; g.lineWidth = Math.max(1, r*.048);
       g.lineCap = "round"; g.lineJoin = "round";
@@ -2101,7 +2646,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.quadraticCurveTo(-r*.058, my - r*.062, 0, my);
       g.quadraticCurveTo(r*.058, my + r*.062, r*.115, my);
       g.stroke();
-      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
+      if (!MR.noNoseDot){
         g.fillStyle = "#5C463C";
         g.beginPath(); g.ellipse(0, my - r*.115, r*.06, r*.043, 0, 0, 7); g.fill();
       }
@@ -2127,13 +2672,15 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.beginPath(); g.ellipse(0, r*.23, r*.085, r*.105, 0, 0, 7); g.fill();
       g.fillStyle = "#E07A20";
       g.beginPath(); g.ellipse(0, r*.27, r*.055, r*.045, 0, 0, 7); g.fill();
+    } else if (MR.noMouth){
+      // 口の ない かお（ぞう）。あけた口も えがかない。mouthRule を 見ること
     } else {
       const oy = T.face === "pig" ? r*.34 : ((T.face === "koala" || T.face === "cow") ? r*.38 : 0);
       g.fillStyle = MC;
       g.beginPath(); g.ellipse(0, r*.245 + oy, r*.072, r*.092, 0, 0, 7); g.fill();
       g.fillStyle = TG;
       g.beginPath(); g.ellipse(0, r*.275 + oy, r*.04, r*.036, 0, 0, 7); g.fill();
-      if (T.face !== "cat" && T.face !== "dog" && T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
+      if (!MR.noNoseDot){
         g.fillStyle = "#5C463C";
         g.beginPath(); g.ellipse(0, r*.13, r*.06, r*.043, 0, 0, 7); g.fill();
       }
@@ -2177,12 +2724,15 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   } else {
     const my = (T.face === "koala" || T.face === "cow") ? r*.62 : (T.face === "pig" ? r*.58 : (T.face === "dog" ? r*.24 : r*.2));
     // はな（ぶたは 大きな はなが すでに あるので えがかない）
-    if (T.face === "pig" || T.face === "koala" || T.face === "cow"){
+    if (MR.bigNose){
       g.strokeStyle = "#5C463C"; g.lineWidth = Math.max(1, r*.045); g.lineCap = "round";
       g.beginPath();
       g.moveTo(-r*.10, my - r*.02);
       g.quadraticCurveTo(0, my + r*.06, r*.10, my - r*.02);
       g.stroke();
+    } else if (MR.noMouth){
+      // 口の ない かお（ぞう）。はな そのものが 顔の 中を とおる ので、
+      // ここで 黒い はなを だすと 2つに なる。mouthRule を 見ること
     } else if (T.face !== "cat"){
       g.fillStyle = "#5C463C";
       g.beginPath(); g.ellipse(0, my - r*.06, r*.07, r*.05, 0, 0, 7); g.fill();
@@ -2192,8 +2742,8 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.moveTo(-r*.07, my-r*.1); g.lineTo(r*.07, my-r*.1); g.lineTo(0, my-r*.01);
       g.closePath(); g.fill();
     }
-    // ω くち（ぶたは 上で えがきおわっている）
-    if (T.face !== "pig" && T.face !== "koala" && T.face !== "cow"){
+    // ω くち（ぶたは 上で えがきおわっている／ぞうは はなが かさなる）
+    if (!MR.bigNose && !MR.noMouth){
       g.strokeStyle = "#5C463C"; g.lineWidth = Math.max(1, r*.045);
       g.lineCap = "round";
       g.beginPath();
@@ -3191,10 +3741,12 @@ function update(dt){
     // おちついて つみあがった子だけを かぞえる。
     // とんでいる子・のぼっている子を かぞえると カウントダウンが 誤爆する
     if (b.y - b.r < DANGER && b.age > .8 && sp < 90 && b.vy > -10){
+      b.overLine = true;                       // 列ごとの 落下判定は この しるしを 見る
       b.danger = Math.min(1.6, b.danger + dt*2);
       danger = true;
       if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
     } else {
+      b.overLine = false;
       b.danger = Math.max(0, b.danger - dt*2);
     }
   }
@@ -3226,8 +3778,40 @@ function clampX(x, r){
   return Math.max(WALL_L + r + 1, Math.min(WALL_R - r - 1, x));
 }
 
+/* ============================================================
+   おとせるか どうかの 判定（列ごと）
+   ============================================================ */
+// 満杯の ところへ おとすと、めりこみ解消が あき場所まで はじき飛ばして しまう。
+// それを ふせぐ ための 判定。
+//
+// **ばんめん ぜんたいを 止めては いけない。** さいしょは
+// `dangerBall != null`（＝どこか 1か所でも ラインを こえたら ぜんぶ 止める）に して
+// いたが、はしの 1列だけ 高く なった ときに **まだ ひろく 空いて いるのに
+// どこにも おとせない** という 手づまりに なった。カウントダウン中に
+// 崩しに いけないのは ゲームとして 理不尽。
+//
+// いまは **おとそうと して いる 列だけ** 見る。よそが つまって いても、
+// 空いて いる ところには おとせる。
+// じゃまに するのは `b.overLine`（＝OVER 判定と 同じ 基準で ラインを こえて
+// おちついて いる子）だけ。とんでいる子・のぼっている子は かぞえない。
+// **この きじゅんを 独自の ものに しないこと**（はやすぎ／おそすぎで どちらも こわれる）。
+function columnBlocked(x, r){
+  for (const b of balls){
+    if (!b.overLine || b.merging || b.dead) continue;
+    if (Math.abs(b.x - x) < b.r + r) return true;   // よこが かさなる ＝ その列は つまっている
+  }
+  return false;
+}
+
 function drop(){
   if (state !== "play" || !held) return;
+  
+  // おとそうと して いる 列が つまって いたら おとさない（ほかの 列は おとせる）
+  const dropX = clampX(aimX, held.r);
+  if (columnBlocked(dropX, held.r)){
+    beep(330, .15, "sine", .05);      // 「ここには おとせない」の あいず
+    return;
+  }
 
   // つぎを 落とした しゅんかん、いまの れんさは そこで おしまい。
   // 「1回の落下が ひきおこした 連続合体」だけを れんさと かぞえる
@@ -3237,7 +3821,7 @@ function drop(){
   }
 
   const b = held;
-  b.x = clampX(aimX, b.r);
+  b.x = dropX;              // 上で もとめた ものを つかう（判定と 落ちる ばしょを そろえる）
   b.vy = 60;
   b.age = 0;
   balls.push(b);
@@ -3451,11 +4035,231 @@ function drawTitleArt(){
   }
 }
 
+/* ============================================================
+   【フェーズ2】キャラ選択UI の実装
+   ============================================================ */
+
+let charSelectOpen = false;
+let charSelectBound = false;
+
+function initCharSelect(){
+  const grid     = document.getElementById("charGrid");
+  const countEl  = document.getElementById("charSelectCount");
+  const selectBtn= document.getElementById("charSelectBtn");
+  if (!grid || !countEl || !selectBtn) return;
+
+  const selected = new Set();
+
+  const orderEl = document.getElementById("charOrder");
+
+  // えらんだ順に 大きさの はしごを かぶせて、そのまま 見せる。
+  // ばんめんでの 大きさと 同じ 比で えがくので
+  //「なにが なにに なるか」が ここで わかる。
+  const paintOrder = () => {
+    if (!orderEl) return;
+    const idxs = Array.from(selected);
+    if (!idxs.length){
+      orderEl.innerHTML = '<div class="empty">えらぶと ここに ならびます</div>';
+      return;
+    }
+    orderEl.innerHTML = '<div class="ttl">おおきい → ちいさい（くっつくと 右へ）</div>';
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const bk = TIERS.slice();
+    while (TIERS.length) TIERS.pop();
+    idxs.forEach((k, i) =>
+      TIERS.push(Object.assign({}, ALL_CHARACTERS[k], { r: SIZE_LADDER[i] })));
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const S = 22 / SIZE_LADDER[0];          // 本当の 比の まま ちぢめる
+    idxs.forEach((k, i) => {
+      if (i){
+        const a = document.createElement("span");
+        a.className = "arw"; a.textContent = "▸";
+        row.appendChild(a);
+      }
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      const box = Math.ceil(SIZE_LADDER[0] * S * 2) + 4;
+      const c = document.createElement("canvas");
+      c.width = box * dpr; c.height = box * dpr;
+      c.style.width = box + "px"; c.style.height = box + "px";
+      c.style.display = "block";
+      const g = c.getContext("2d");
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.translate(box / 2, box / 2);
+      try { drawCreature(g, i, SIZE_LADDER[i] * S, i * 1.3, 1, 0, .5, 0, 1); } catch(e){}
+      const nm = document.createElement("div");
+      nm.className = "nm"; nm.textContent = ALL_CHARACTERS[k].name;
+      slot.appendChild(c); slot.appendChild(nm);
+      row.appendChild(slot);
+    });
+
+    while (TIERS.length) TIERS.pop();
+    bk.forEach(c => TIERS.push(c));
+    LAST = TIERS.length - 1;
+
+    orderEl.appendChild(row);
+  };
+
+  const paintCount = () => {
+    countEl.textContent = `えらんだ数: ${selected.size} / 6`;
+    selectBtn.disabled = selected.size !== 6;
+    // バッジを 何ばんめに えらんだかの 数字に する
+    const idxs = Array.from(selected);
+    grid.querySelectorAll(".charCard").forEach((el, i) => {
+      const n = idxs.indexOf(i);
+      const ck = el.querySelector(".checkmark");
+      if (ck) ck.textContent = n < 0 ? "" : String(n + 1);
+    });
+    paintOrder();
+  };
+
+  grid.innerHTML = "";
+  // drawCreature は TIERS[i] を 見る。見本は 9体 ぜんぶ えがきたいので
+  // その あいだだけ TIERS を 全キャラに 入れかえ、あとで かならず もどす。
+  const tiersBackup = TIERS.slice();
+  while (TIERS.length) TIERS.pop();
+  ALL_CHARACTERS.forEach(c => TIERS.push(c));
+
+  ALL_CHARACTERS.forEach((char, idx) => {
+    const card = document.createElement("div");
+    card.className = "charCard";
+
+    const cvs = document.createElement("canvas");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cvs.width = 64 * dpr; cvs.height = 64 * dpr;
+    const g = cvs.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // ゲーム本体と おなじ えがき方。見本なので 表情は わらいがお固定。
+    try {
+      g.save(); g.translate(32, 32);
+      drawCreature(g, idx, 26, idx * 1.3, 1, 0, .6, 0, 1);
+      g.restore();
+    } catch(e){
+      g.fillStyle = char.body;
+      g.beginPath(); g.arc(32, 32, 24, 0, 7); g.fill();
+    }
+
+    const nm = document.createElement("div");
+    nm.className = "name"; nm.textContent = char.name;
+
+    const ck = document.createElement("div");
+    ck.className = "checkmark";
+
+    card.appendChild(cvs); card.appendChild(nm); card.appendChild(ck);
+    card.addEventListener("click", () => {
+      if (selected.has(idx)){
+        selected.delete(idx); card.classList.remove("selected");
+      } else if (selected.size < 6){
+        selected.add(idx); card.classList.add("selected");
+      } else {
+        return;
+      }
+      paintCount();
+    });
+    grid.appendChild(card);
+  });
+
+  // TIERS を もとに もどす（もどし忘れると ゲームが こわれる）
+  while (TIERS.length) TIERS.pop();
+  tiersBackup.forEach(c => TIERS.push(c));
+  LAST = TIERS.length - 1;
+
+  // addEventListener だと よびなおすたび 二重に つく
+  selectBtn.onclick = () => {
+    if (selected.size !== 6) return;
+    const chars = Array.from(selected).map(i => ALL_CHARACTERS[i]);
+    selectedTiers = chars;
+    customChars = true;                 // もう ひとことは 出さない
+    try {
+      localStorage.setItem("mamemaru-selected-chars",
+                           JSON.stringify(chars.map(c => c.name)));
+    } catch(e){}
+    hideCharSelect();
+  };
+
+  paintCount();
+}
+
+function showCharSelect(){
+  const layer = document.getElementById("charSelectOverlay");
+  if (!layer) return;
+  layer.classList.remove("hidden");
+  charSelectOpen = true;
+  initCharSelect();
+}
+
+function hideCharSelect(){
+  const layer = document.getElementById("charSelectOverlay");
+  if (layer) layer.classList.add("hidden");
+  charSelectOpen = false;
+  // えらんだ セットで しんかの図を えがきなおす
+  if (selectedTiers && selectedTiers.length === 6) applySelectedTiers();
+  try { paintLastName(); } catch(e){}
+  try { fitCanvas(); initTitleArt(); initChainBar(); renderLadder(); } catch(e){}
+}
+
+/* タイトルの 文の 中の「いちばん ちいさい子」を、じっさいに えらばれた
+   6番目の子の 名前に 入れかえる（`<span class="lastName">`）。
+   ひよこ 決めうちの 文だったが、顔ぶれを えらべる ように なって 嘘に なった。
+   HTML には 名前ではなく「いちばん ちいさい子」を 書いて おくこと。
+   ここが 動かなくても 意味の 通る 文が のこる。
+   よぶ ところは 2つ：`bindTitleButtons()`（タイトルを 組みなおした あと）と
+   `hideCharSelect()`（えらび終わった あと）。 */
+function paintLastName(){
+  const t = TIERS[TIERS.length - 1];
+  if (!t || !t.name) return;
+  document.querySelectorAll(".lastName").forEach(e => { e.textContent = t.name; });
+}
+
+// えらんだ セットを TIERS に うつす（参照は そのまま）
+function applySelectedTiers(){
+  if (!selectedTiers || selectedTiers.length !== 6) return;
+  while (TIERS.length) TIERS.pop();
+  // もとの r は 見本用の 目やす。ばんめんでは はしごの 大きさに そろえる。
+  // そろえないと 下の段の ほうが 大きい ことが おきて
+  //「くっつくと ちいさくなる」が こわれる。
+  selectedTiers.forEach((c, i) => TIERS.push(Object.assign({}, c, { r: SIZE_LADDER[i] })));
+  LAST = TIERS.length - 1;
+  generateDropPool();
+}
+
+function loadSelectedChars(){
+  try {
+    const saved = localStorage.getItem("mamemaru-selected-chars");
+    if (!saved) return false;
+    const names = JSON.parse(saved);
+    const chars = names.map(n => ALL_CHARACTERS.find(c => c.name === n))
+                       .filter(Boolean);
+    if (chars.length === 6){ selectedTiers = chars; return true; }
+  } catch(e){}
+  return false;
+}
+
 function bindTitleButtons(){
+  // **はじめての人に えらび画面を 出さない こと。**
+  // さいしょは いきなり 15枚の カードを 出して いたが、まだ 一度も 遊んで いない人には
+  // どの子が どう うごくかも、順番が どう 効くかも わからない。**えらぶ 手がかりを
+  // 持って いない人に 決めさせて いた。** おまけに「まめまる」の 第一印象が
+  // 遊びでは なく **設定画面**に なって いた。
+  // いまは もとの 6体で そのまま はじめて、えらべる ことは 1回 遊んだ あとに
+  // 下の #pickHint で そっと 知らせる。
+  if (!selectedTiers){
+    customChars = loadSelectedChars();
+    if (!customChars) selectedTiers = DEFAULT_TIERS.slice();
+    applySelectedTiers();
+  }
+
+  paintLastName();
+
   const sb = document.getElementById("startBtn");
   if (sb) sb.addEventListener("click", start);
   const cb = document.getElementById("codeBtn");
   if (cb) cb.addEventListener("click", openSave);
+  const eb = document.getElementById("editCharBtn");
+  if (eb) eb.addEventListener("click", showCharSelect);
   initTitleArt();
   initChainBar();
   const btns = document.querySelectorAll("#modes .mode");
@@ -3474,8 +4278,11 @@ function bindTitleButtons(){
       const b = bestRef();
       rec.innerHTML = b > 0
         ? `さいこう ${b}てん ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}かいめ</span>`
-        : `<span>はじめまして！ まずは 20てん を めざそう</span>`;
+        : `<span>まずは 20てん を めざそう</span>`;
     }
+    // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
+    const hint = document.getElementById("pickHint");
+    if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
     if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
     updateHUD();
   };
@@ -3526,10 +4333,33 @@ function nextGoal(n){
 }
 
 
+/* ============================================================
+   DROP_POOL の生成（フェーズ2用）
+   ============================================================ */
+// おちてくる 子の わりあい。もとの [0,0,0,1,1,1,2,2,2,3,3,4,4] を そのまま つかう。
+// いちばん 小さい子（LAST）は ここに 入れない。合体でしか 生まれない のが
+// この ゲームの きもで、おとせる ように すると「みおくり」が こわれる。
+const DROP_COUNTS = [3, 3, 3, 2, 2];   // tier 0..4 の まい数。LAST は なし。
+
+function generateDropPool(){
+  DROP_POOL.length = 0;
+  const upto = Math.min(DROP_COUNTS.length, TIERS.length - 1);  // LAST は のぞく
+  for (let i = 0; i < upto; i++){
+    for (let j = 0; j < DROP_COUNTS[i]; j++) DROP_POOL.push(i);
+  }
+  // まんいち からに なったら いちばん 大きい子だけは おとせる ように する
+  if (!DROP_POOL.length) DROP_POOL.push(0);
+}
+
 function start(){
+  
   overlay.classList.add("hidden");
   overlay.classList.remove("result");
+  
+  applySelectedTiers();
+  
   reset();
+  
   state = "play";
   if (!AC && soundOn){ try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
   if (AC && AC.state === "suspended") AC.resume();
@@ -3647,6 +4477,92 @@ function initChainBar(){
   bctx = c.getContext("2d");
   bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   renderChainBar(0);
+}
+
+/* ============================================================
+   みぎの たての しんかの図（ゲーム中も ずっと 見えて いる）
+   ------------------------------------------------------------
+   もとは タイトルの よこ長の バー（#chain）しか なく、**ゲーム中は
+   順番を 見る ところが どこにも なかった**。顔ぶれが 固定の ころは
+   2〜3回 遊べば 覚えて しまったので それで よかったが、
+   えらべる ように なって 覚えきれなく なった。
+
+   **1ゲームの あいだ 中身は 変わらない ので、1回だけ えがいて
+   置いて おく。** 毎フレーム えがくと 電力の 予算（CLAUDE.md）を こわす。
+   えがきなおすのは 大きさが 変わった とき（fitCanvas）と
+   顔ぶれを 変えた とき だけ。
+   ============================================================ */
+function initLadder(scale){
+  const c = document.getElementById("ladderCv");
+  if (!c){ ladCtx = null; return; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = LAD_W * dpr; c.height = CH * dpr;
+  c.style.width = (LAD_W * scale) + "px";
+  c.style.height = (CH * scale) + "px";
+  ladCtx = c.getContext("2d");
+  ladCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  renderLadder();
+}
+
+function renderLadder(){
+  if (!ladCtx) return;
+  const g = ladCtx, W = LAD_W, H = CH;
+  g.clearRect(0, 0, W, H);
+
+  // 下じき
+  const lg = g.createLinearGradient(0, 0, 0, H);
+  lg.addColorStop(0, "rgba(255,250,252,.92)");
+  lg.addColorStop(1, "rgba(255,236,244,.92)");
+  g.fillStyle = lg; roundRect(g, 0, 0, W, H, 14); g.fill();
+
+  g.textAlign = "center";
+  g.fillStyle = "#d79ab4"; g.font = "bold 9px sans-serif";
+  g.fillText("おおきい", W/2, 15);
+
+  // 6体ぶんの 高さを 出して、あまりを すきまに くばる
+  const TOP = 24, BOT = 40, ARW = 9;
+  const maxR = (W - 12) / 2;                 // いちばん 大きい子の 半径
+  const S = maxR / TIERS[0].r;
+  const rs = TIERS.map(t => t.r * S);
+  const need = rs.reduce((s, r) => s + r*2, 0) + ARW * TIERS.length;  // 矢印は 6こ（さいごの ばいばい ぶんも）
+  const gap = Math.max(4, (H - TOP - BOT - need) / (TIERS.length + 1));
+
+  let y = TOP + gap;
+  TIERS.forEach((t, i) => {
+    const r = rs[i];
+    g.save(); g.translate(W/2, y + r);
+    drawCreature(g, i, r, i * 1.3, 1, 0, 0, 0, 1);
+    g.restore();
+    y += r*2;
+    // 下むきの ▽
+    g.fillStyle = "#f0bed2";
+    g.beginPath();
+    g.moveTo(W/2 - 5, y + gap*.5 - 2);
+    g.lineTo(W/2 + 5, y + gap*.5 - 2);
+    g.lineTo(W/2,     y + gap*.5 + 4);
+    g.closePath(); g.fill();
+    y += ARW + gap;
+  });
+
+  // さいごは ばいばい（きらきら）
+  g.fillStyle = "#ffd86b";
+  g.save(); g.translate(W/2, y + 4);
+  for (let i = 0; i < 3; i++){
+    g.save();
+    g.translate(Math.cos(i*2.1)*6, Math.sin(i*2.1)*5);
+    g.rotate(i*.7);
+    g.beginPath();
+    for (let j = 0; j < 10; j++){
+      const a = -Math.PI/2 + j*Math.PI/5, rr = (j%2) ? 1.9 : (i ? 3.4 : 5.6);
+      const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
+      if (j) g.lineTo(px, py); else g.moveTo(px, py);
+    }
+    g.closePath(); g.fill();
+    g.restore();
+  }
+  g.restore();
+  g.fillStyle = "#e79ab6"; g.font = "bold 9px sans-serif";
+  g.fillText("ばいばい", W/2, y + 20);
 }
 
 function renderChainBar(su){

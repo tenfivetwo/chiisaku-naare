@@ -6,7 +6,7 @@
  *   ★ VERSION を上げる必要はありません。上げ忘れても事故りません。
  *   （VERSION が効くのは、めったに変えないアイコンと manifest だけです）
  */
-const VERSION = "v25";
+const VERSION = "v26";   // v26: アイコンを らいおん(tier 0)に 作りなおした
 const CACHE = "mamemaru-" + VERSION;
 
 /* オフラインでも遊べるように、最初に取っておくファイル */
