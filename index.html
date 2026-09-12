@@ -205,11 +205,17 @@
   /* ばんめんと 同じ はば(430px)で 折りかえす。
      max-width を つけないと、ひろい画面で 文が 一行に のびて
      **パネルの 左右に はみ出す**（#chain と 同じ しばりに そろえて ある）。 */
+  /* 隠しコマンドの ひとこと。ふだんは hidden なので たての 予算を 食わない。 */
+  #overlay p.petMsg { font-size: 11px; color: #b98ac4; margin: -2px 0 0; }
+
   /* 1回 遊んだ あとだけ 出る ひとこと。えらび画面を 最初に 出さない かわり。 */
   #overlay p.pickHint { font-size: 11px; color: #e08aa8; margin-top: -4px; }
 
-  #foot { font-size: 11px; color: #a58e83; text-align: center; line-height: 1.6;
-          width: 100%; max-width: 430px; box-sizing: border-box; }
+  /* タイトルに **よこに ながい 文**を 足す ときは かならず これを つけること。
+     `#overlay` は 画面ぜんたいに ひろがる ので、max-width が ないと
+     ひろい画面で 文が 一行に のびて **パネルの 左右に はみ出す**。
+     消した #foot で じっさいに 598px まで のびた（パネルは 430px）。 */
+  #overlay .wide { width: 100%; max-width: 430px; box-sizing: border-box; }
 
   /* せまい画面では ゲーム画面を ゆうせん */
   @media (max-height: 900px){
@@ -225,7 +231,6 @@
     #overlay .lead { font-size: 13px; line-height: 1.7; }
     #overlay h1 { font-size: 25px; }
     #titleCv { max-width: 220px; }
-    #foot { font-size: 10px; }
   }
   /* iPhone SE など たてが みじかい 機種 */
   @media (max-height: 700px){
@@ -354,6 +359,17 @@
   }
   #charOrder .arw { font-size: 10px; color: #d9b7c4; padding-bottom: 12px; }
   #charOrder .empty { font-size: 11px; color: #c4aeb8; padding: 12px 0; }
+  /* あいことばで 手に 入れた 子。ふつうの子と 見わけが つくように */
+  .charCard.secretCard { box-shadow: 0 0 0 2px #ffd9a8, 0 3px 10px rgba(210,160,90,.28); }
+  .charCard.secretCard .name::after { content: " ✨"; }
+  /* 隠しコマンド「しりとり」が そろった ときだけ */
+  #charOrder.shiritori {
+    background: linear-gradient(135deg,#fff4fb,#f3f8ff 40%,#fffaf0);
+    border-color: #ffd9ee;
+    box-shadow: 0 0 0 3px rgba(255,190,225,.45), 0 6px 18px rgba(200,150,190,.25);
+  }
+  #charOrder.shiritori .ttl { color: #e0699c; font-weight: 700; font-size: 11px; }
+  #charOrder .sh { font-size: 10px; color: #b98ac4; margin-top: 5px; }
   #charSelectCount {
     margin: 10px 0; font-size: 14px; font-weight: 700; color: #f2789a;
   }
@@ -394,6 +410,7 @@
     <div id="overlay">
       <h1>まめまる</h1>
       <canvas id="titleCv"></canvas>
+      <p class="petMsg hidden" id="petMsg"></p>
       <p class="lead">
         おなじ子が くっつくと <b>ちいさく</b> なる。<br>
         <span class="lastName">いちばん ちいさい子</span>を <b>おおく みおくる</b>ほど 高とくてん。<br>
@@ -404,16 +421,14 @@
         <button class="mode" data-m="1">まめまる ふえる</button>
       </div>
       <p class="modeinfo" id="modeInfo"></p>
+      <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
       <p class="myrec" id="myRec"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
-      <div id="foot">おなじ子 ×2 → ひとつ小さい子 ×1 ／ <span class="lastName">いちばん小さい子</span> ×2 は なかよく かけていく<br>
-  <b>あずける</b>をタップで 1ぴき キープ（↓キー） ／ <b>1回の落下</b>で 4かい つづけて合体＝<b>れんさ</b>（つぎを おとすと そこで確定）</div>
       <button class="btn" id="startBtn">はじめる</button>
       <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
       <button class="link" id="editCharBtn">まめまるを えらびなおす</button>
       <p class="pickHint hidden" id="pickHint">すきな まめまる を 6つ えらべるよ ✨</p>
       <button class="link" id="calmBtn">えんしゅつを よわめる</button>
-      <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
     </div>
   </div>
 
@@ -497,6 +512,63 @@ const ALL_CHARACTERS = [
 
 ];
 
+/* ============================================================
+   シークレットの 3体
+   ------------------------------------------------------------
+   `ALL_CHARACTERS` の **うしろに** つないで、`secret: true` で しるしを つける。
+   - **うしろに つなぐ こと。** `DEFAULT_TIERS = ALL_CHARACTERS.slice(0, 6)` が
+     もとの 6体を 見て いる ので、まえに 入れると 既定の 顔ぶれが 変わる。
+   - えらび画面は `isUsable()` が false の 子を とばす ので、
+     解放するまで **1枚も 出ない**。
+   - 解放は あいことば（`い` / `ユニコーン` / `たつ`）。
+     `localStorage: mamemaru-unlocked` に 名前で ためる ので ずっと のこる。
+   絵の 確認は `node tools/render-secret.js`。
+
+   色の えらび方：15体で 空いて いたのは **むらさき・濃い緑・赤**。
+   - いのしし … こげ茶だが **クリームの よこじま**で くま・たぬきと 分ける
+                （うし・パンダ・ねこが 白を 模様で 分けて いるのと 同じ）
+   - ユニコーン … むらさき。15体で だれも つかって いない
+   - ドラゴン … 青みどり。めじろ（黄みどり）と はっきり ちがう
+   ============================================================ */
+const SECRET_CHARACTERS = [
+  // 体の 色は **くま(#B98457) から はなす** のが 条件。
+  // さいしょ #9A6A44 に して いたが くま と ΔE 11.0 しか なかった。
+  // うり坊 らしい 赤みの ある 栗色に して ΔE 19.8（たぬきとも 31.1）。
+  { secret:true, name:"いのしし", r:38, body:"#96522E", shade:"#7C401F", line:"#5A2C13", ear:"boar",
+    earIn:"#C08A6A", face:"boar", sm:"grin", eye:"sparkle", acc:"star", fluff:14, amp:.032,
+    hi:"#AE6B42", tan:"#F5E3C6", snout:"#9E7060", earA:"#874628", earTip:"#5A2C13" },
+  // 白。うし・パンダ・ねこ と 同じ 白系だが、**にじいろの たてがみ**が
+  // 模様として 効く（うし＝ぶち、パンダ＝目のぶち、ねこ＝三毛 と 同じ 考え方。
+  // テスト H も `earA` を 持つ子を 模様もちと して 見のがす）。
+  // ベージュに した ことも あるが、**ベージュ枠は ひつじ(#E8D6AE) の もの**で、
+  // ふつうの クリーム系は どれも ひつじと ΔE 2〜11 しか なかった。
+  { secret:true, name:"ユニコーン", r:33, body:"#FFFCF6", shade:"#F2E6DE", line:"#D4C2B8", ear:"unicorn",
+    earIn:"#FFC2D6", face:"unicorn", sm:"nyan", eye:"sparkle", acc:"sparkle", fluff:13, amp:.030,
+    hi:"#FFFFFF", hornC:"#FFE08A", hornL:"#C79A2E", earA:"#F7EAE4",
+    muzzle:"#FCE6DE" },
+  { secret:true, name:"ドラゴン", r:42, body:"#5FB59A", shade:"#469680", line:"#2F7562", ear:"none",
+    earIn:"#A8DCC9", face:"dragon", sm:"tooth", eye:"sparkle", acc:"note", fluff:15, amp:.034,
+    hi:"#8ACFB8", tan:"#FFF0CE", spike:"#E9C46A", hornC:"#F0D08A", hornL:"#B8873A" },
+];
+// **うしろに つなぐ。** まえに 入れると DEFAULT_TIERS（もとの 6体）が ずれる。
+SECRET_CHARACTERS.forEach(c => ALL_CHARACTERS.push(c));
+
+/* 解放ずみの シークレット。名前で ためる。 */
+let unlockedChars = [];
+try {
+  const u = JSON.parse(localStorage.getItem("mamemaru-unlocked") || "[]");
+  if (Array.isArray(u)) unlockedChars = u.filter(n => typeof n === "string");
+} catch(e){}
+/* えらび画面に 出して よい子か。ふつうの子は いつでも true。 */
+function isUsable(c){ return !c || !c.secret || unlockedChars.indexOf(c.name) >= 0; }
+/* 解放する。あたらしく 解放できたら true。 */
+function unlockChar(nm){
+  if (unlockedChars.indexOf(nm) >= 0) return false;
+  unlockedChars.push(nm);
+  try { localStorage.setItem("mamemaru-unlocked", JSON.stringify(unlockedChars)); } catch(e){}
+  return true;
+}
+
 // 大きさの はしご。CLAUDE.md の とおり いぬ/ねこ の 1.12 が いちばん つまっている。
 // キャラを 入れかえても この 数列は 変えない。だれが どの段に のるかだけを 変える。
 const SIZE_LADDER = [64, 49, 36, 29, 26, 22];
@@ -506,6 +578,10 @@ let selectedTiers = null;
 // じぶんで えらんだ ことが あるか。false の あいだだけ
 // 1回 遊んだ あとに「えらべるよ」の ひとことを 出す。
 let customChars = false;
+// タイトルの 表示を つくりなおす 関数。bindTitleButtons() の 中の paint を
+// ここに 入れて、外（よみこみ など）からも よべる ように して ある。
+// タイトルは overlay.innerHTML で 作りなおされる ので、毎回 入れなおす。
+let titlePaint = null;
 
 // デフォルトセット
 const DEFAULT_TIERS = ALL_CHARACTERS.slice(0, 6); // 最初の6キャラ
@@ -618,6 +694,34 @@ function flash(life){
 function shakeBy(v){ shake = Math.max(shake, calmFx ? Math.min(v, 3) : v); }
 const SPARKLE_RATE = 1 / 28;         // ひよこが ひかって 生まれる かくりつ
 const SPARKLE_TIER = 5;              // これ いこうの 子が ひかる（ひよこ）
+// じっさいに つかう 値。ふだんは 上と 同じ。
+// しりとりの 隠しコマンドの ときだけ 入れかわる（下の SHIRITORI）。
+let sparkleRate = SPARKLE_RATE, sparkleTier = SPARKLE_TIER;
+
+/* ============================================================
+   隠しコマンド「しりとり」
+   ------------------------------------------------------------
+   15体の 名前で 6体 つながる しりとりは **この 1とおり しか ない**。
+   しかも さいごが「ん」で おわる。
+   えらぶ 順まで 合わせる ひつようが あるので 360万とおりの 中の 1つ。
+   ぐうぜん 当たる ことは まず ない。
+
+     ぶタ → たぬキ → きつネ → ねコ → こあラ → らいおン
+
+   そろえると **にじいろ まめまる**に なる。
+   ひかる かくりつと ひかる 段を 上げて、全消しが 何度も 起きる。
+
+   **この回は 記録に 残さない。** 全消しが 連発して 点が 青天井に なるので、
+   同じ 枠に 入れると ふつうの さいこう点が 意味を 失う
+   （設計判断5 の「のんびりモードを 分けた」のと まったく 同じ りくつ）。
+   ⭐も 増やさない（おだいが すぐ 終わって しまう ため）。
+   ============================================================ */
+const SHIRITORI = ["ブタ", "たぬき", "きつね", "ねこ", "こあら", "らいおん"];
+function isShiritori(list){
+  return !!list && list.length === 6 &&
+         list.every((c, i) => (c && c.name ? c.name : c) === SHIRITORI[i]);
+}
+let rainbowRun = false;              // いまの 回が にじいろか
 /* れんさの てんすう。
    よこの ひろがりで 0.6〜1.0ばい する。
    かべぎわ1れつに つみつづける だけの 打ちかたが 最強に ならないように するため。 */
@@ -695,7 +799,15 @@ function gravityAt(){ return 2300 + (level-1) * 120; }
 let missions = [], stamps = 0, runBest = 0, popScore = 0;
 let bestEver = 0, bestFreeEver = 0, stampTotal = 0, plays = 0;
 function bestRef(){ return spawnRows ? bestEver : bestFreeEver; }
-function setBestRef(v){ if (spawnRows) bestEver = v; else bestFreeEver = v; }
+function setBestRef(v){
+  // **にじいろの 回は ここで 止める。**
+  // 記録を 書きこむ 口は ①ゲーム中の 更新（あつまった数が 変わった とき）
+  // ②0.5びょうごとの 更新 ③ゲームオーバー の 3つ あり、
+  // ③だけ 止めて いて もれて いた（実測で 記録が 88点 のこった）。
+  // 口を 1つに して 止める。あたらしい 書きこみ口を 足しても もれない。
+  if (rainbowRun) return;
+  if (spawnRows) bestEver = v; else bestFreeEver = v;
+}
 try {
   const s = JSON.parse(localStorage.getItem("fuwamoko-drop") || "{}");
   const n0 = x => { const n = Math.floor(Number(x)); return (isFinite(n) && n >= 0) ? Math.min(n, 999999) : 0; };
@@ -1088,6 +1200,11 @@ function beep(freq, dur, type, vol){
   if (!soundOn) return;
   try {
     if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    // **できたての AudioContext は とまって いる。** ブラウザは 指で さわるまで
+    // 音を 鳴らさせない ので、`start()` の resume だけに たよると
+    // **タイトル画面の 音が ぜんぶ 無音**に なる（なでる音・ファンファーレ）。
+    // ここで 起こす。指で さわった ながれの 中で よばれる ので 起きられる。
+    if (AC.state === "suspended") AC.resume();
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = type || "sine";
     o.frequency.setValueAtTime(freq, AC.currentTime);
@@ -1306,12 +1423,12 @@ function chainFinale(n, x, y){
   if (sec >= .5){
     riseBonusUsed += sec;
     riseT = Math.min(riseSpan, riseT + sec);        // ためこめるのは 1かいぶん まで
-    bonus = "+" + pts + "てん ／ せりあがり +" + sec.toFixed(1) + "びょう";
+    bonus = "+" + pts + "点 ／ せりあがり +" + sec.toFixed(1) + "びょう";
   } else if (n >= 6){
     stamps++;                                        // じかんが もらえない ぶんは ⭐に
-    bonus = "+" + pts + "てん ／ ⭐ボーナス！";
+    bonus = "+" + pts + "点 ／ ⭐ボーナス！";
   } else {
-    bonus = "+" + pts + "てん！";
+    bonus = "+" + pts + "点！";
   }
   // 6れんさ いじょうで はやさが ひとつ まえに もどる
   if (n >= LV_BACK_MIN && level > 1 && lvBackCool <= 0 && lvBackLeft > 0){
@@ -1328,7 +1445,7 @@ function chainFinale(n, x, y){
   }
   if (n >= 8){
     floorY = Math.min(FLOOR0, floorY + RISE_STEP);
-    bonus = "+" + pts + "てん ／ ゆかが さがった！";
+    bonus = "+" + pts + "点 ／ ゆかが さがった！";
     for (let i = 0; i < 14; i++)
       fx.push({ t:"p", x: rnd(WALL_L, WALL_R), y: floorY - rnd(0, 26),
                 vx: rnd(-90,90), vy: rnd(-260,-90), r: rnd(3,7),
@@ -1403,7 +1520,7 @@ function doMerge(a, b){
   balls.push(nb);
   bumpMission("make", t+1);
   addChain(mx, my);
-  if (t + 1 >= SPARKLE_TIER && Math.random() < SPARKLE_RATE) makeSparkle(nb);
+  if (t + 1 >= sparkleTier && Math.random() < sparkleRate) makeSparkle(nb);
   if (boom) clearAll(mx, my);
   burst(mx, my, col.body, 14, 1);
   ring(mx, my, a.r*2.1, col.shade);
@@ -1674,12 +1791,15 @@ function mouthRule(T){
   // くちを いっさい えがかない かお（ぞう＝はなが くちの ばしょを とおる）
   const noMouth = (T.face === "elephant");
   // すでに 大きな はなが あって、はなの すじだけ 足す かお
-  const bigNose = (T.face === "pig" || T.face === "koala" || T.face === "cow");
+  // すでに 大きな はなが あって、はなの すじだけ 足す かお
+  const bigNose = (T.face === "pig" || T.face === "koala" || T.face === "cow" ||
+                   T.face === "boar");
   return {
     noMouth,
     bigNose,
     // ちいさな 黒い はなの 点を 置かない かお
     noNoseDot: noMouth || bigNose || T.face === "cat" || T.face === "dog",
+    // くちの たかさ。大きな はなの 下に くる 子は 下げる
   };
 }
 
@@ -2127,6 +2247,66 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.closePath(); g.fill();
       g.restore();
     }
+  } else if (T.ear === "boar"){
+    // うり坊：ちいさい 立ちみみ。さきが こい。1.10r いない
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.56, -r*.70); g.rotate(s*0.22);
+      g.fillStyle = T.earA || T.body;
+      g.beginPath();
+      g.moveTo(-r*.19, r*.20); g.lineTo(0, -r*.34); g.lineTo(r*.19, r*.20);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = T.earTip || T.line;
+      g.beginPath();
+      g.moveTo(-r*.085, -r*.06); g.lineTo(0, -r*.34); g.lineTo(r*.085, -r*.06);
+      g.closePath(); g.fill();
+      g.restore();
+    }
+  } else if (T.ear === "unicorn"){
+    // **たてがみは ここで えがく（＝体の うしろ）。**
+    // かおの 段で えがいて、ねもとを 体の色の まるで ふさいで いた ときは、
+    // その まるの ふちが そのまま 見えて、**もこもこ輪郭の 中に
+    // つるんとした 円が 浮いて いる** ように なった。
+    // うしろに 置けば、体の もこもこ輪郭が そのまま ねもとを かくす。
+    {
+      // **ひだりへ ながす。ふっさりと。**
+      // まうえに そろえて 7つ ならべて いた ときは、たてがみでは なく
+      // **色の ついた ぼうし**に 見えた。いまは 13房 ×2そう かさねて、
+      // ひだり(9時の 方向)から あたまの 上まで 弧を えがく。
+      // **さいだいの のび は .88 + .245*1.25 = 1.19r（1.22r を こえない）。**
+      const MANE = ["#FF9EC0","#FFB6A8","#FFD79A","#FFF2A6","#B8EBBE","#A8D9F2","#C6BCF5"];
+      const N = 13, A0 = -Math.PI*0.97, A1 = -Math.PI/2 + .45;
+      for (let layer = 0; layer < 2; layer++){
+        for (let i = 0; i < N; i++){
+          const a = A0 + (A1 - A0) * (i + (layer ? .5 : 0)) / (N - 1);
+          const len = 1.25 - i * .033;               // ひだりほど ながい
+          const d   = layer ? .95 : .88;
+          const sc  = layer ? .74 : 1;
+          g.fillStyle = MANE[(i + layer*3) % MANE.length];
+          g.save();
+          g.translate(Math.cos(a) * r * d, Math.sin(a) * r * d);
+          g.rotate(a + Math.PI/2);
+          g.beginPath(); g.ellipse(0, 0, r*.135*(layer?.85:1), r*.245*len*sc, 0, 0, 7); g.fill();
+          g.restore();
+        }
+      }
+    }
+    // みみ：ほそい 木の葉がた。つのの じゃまを しないよう そとに ひらく
+    for (const s of [-1, 1]){
+      g.save(); g.translate(s*r*.62, -r*.62); g.rotate(s*0.55);
+      g.fillStyle = T.earA || T.body;
+      g.beginPath();
+      g.moveTo(0, r*.26);
+      g.quadraticCurveTo(-r*.16, -r*.08, 0, -r*.34);
+      g.quadraticCurveTo(r*.16, -r*.08, 0, r*.26);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = T.earIn;
+      g.beginPath();
+      g.moveTo(0, r*.16);
+      g.quadraticCurveTo(-r*.075, -r*.04, 0, -r*.24);
+      g.quadraticCurveTo(r*.075, -r*.04, 0, r*.16);
+      g.closePath(); g.fill();
+      g.restore();
+    }
   } else if (T.ear === "floppy"){
     // そと(earA)＋内がわ(earIn) の 2色。1色の ぬりつぶしに すると、
     // 色が こいとき「大きな 黒い かたまり」に なって 体より 目立った。
@@ -2473,6 +2653,165 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.beginPath(); g.ellipse(-r*.075, r*.17, r*.065, r*.05, -.4, 0, 7); g.fill();
   }
   // ぶたの はな（大きな よこ長。あなと ツヤつき）
+  /* ============================================================
+     シークレットの 3体。**まだ ALL_CHARACTERS には 入れて いない**ので
+     ふつうに 遊ぶ ぶんには ここは 一度も 通らない。
+     定義は 下の SECRET_CHARACTERS。
+     ============================================================ */
+
+  // うり坊（いのししの こども）。**しま模様が いのち。**
+  // こげ茶 だけだと くま・たぬきと 見分けが つかない ので、
+  // クリームの よこじまで 模様として 分ける（うし・パンダ・ねこと 同じ 考え方）。
+  if (T.face === "boar"){
+    g.save();
+    // うり坊の しま。**顔の はしに みじかい 線で 置く。**
+    // よこ幅いっぱいの おびに したら、しま では なく
+    // 「あごひげ」に 見えた（これは かお であって 体では ない）。
+    g.fillStyle = T.tan || "#F2DFC2";
+    g.globalAlpha = .92;
+    for (const s2 of [-1, 1]) for (const [yy, ln] of [[-.46, .26], [-.22, .30], [.04, .26]]){
+      g.save(); g.translate(s2*r*.66, r*yy); g.rotate(s2*0.42);
+      g.beginPath(); g.ellipse(0, 0, r*ln*.5, r*.052, 0, 0, 7); g.fill();
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    g.restore();
+    // はな（ぶたより ちいさく・こい色。まるく しすぎると ぶたに なる）
+    g.fillStyle = T.snout || "#8E6B53";
+    g.strokeStyle = T.line; g.lineWidth = Math.max(1, r*.04);
+    g.beginPath(); g.ellipse(0, r*.30, r*.215, r*.165, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "#5C463C";
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(s2*r*.085, r*.31, r*.035, r*.05, 0, 0, 7); g.fill();
+    }
+    // きば 2本。**上むきに ちいさく。** 大きくすると こわい顔に なる
+    // きば：はなの 両わきから 上むきに。ちいさすぎると なにか わからない
+    g.fillStyle = "#FFFBF2"; g.strokeStyle = "#CFBBA0"; g.lineWidth = Math.max(.9, r*.026);
+    for (const s2 of [-1,1]){
+      g.save(); g.translate(s2*r*.235, r*.40); g.scale(s2, 1); g.rotate(-.22);
+      g.beginPath();
+      g.moveTo(-r*.055, r*.10);
+      g.quadraticCurveTo(-r*.02, -r*.14, r*.045, -r*.19);
+      g.quadraticCurveTo(r*.075, -r*.02, r*.055, r*.10);
+      g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
+  }
+
+  // ユニコーン。**むらさきは 15体で 空いて いた ゆいいつの 色。**
+  // 角は 金。たてがみは にじいろ。どちらも 1.22r を こえない こと。
+  if (T.face === "unicorn"){
+    // **ながい はなづら。** これが ないと ただの まるい たまで、
+    // 馬らしさが どこにも なかった（「なんだか わからない」と 言われた）。
+    // **よこより たてを ながく する** のが きも。まるい マズルだと ねこに なる。
+    g.fillStyle = T.muzzle || "#FFF4E4";
+    g.beginPath(); g.ellipse(0, r*.30, r*.235, r*.315, 0, 0, 7); g.fill();
+    // はなづらの ふち（うっすら）。面が 浮いて 見えないように
+    g.save(); g.globalAlpha = .35; g.strokeStyle = T.line;
+    g.lineWidth = Math.max(.8, r*.022);
+    g.beginPath(); g.ellipse(0, r*.30, r*.235, r*.315, 0, 0, 7); g.stroke();
+    g.restore();
+
+    // **前がみ（まえに たらした たてがみ）。**
+    // うしろの たてがみだけだと あたまの うしろで 完結して しまう。
+    // ひたいに かかる 房を 3つ 足すと ぐっと 生きものに なる。
+    {
+      // ひたいに **はっきり かかる** ながさに する。
+      // さきが -.58r あたりで 終わって いた ときは、うしろの たてがみに
+      // まぎれて **前がみが あるのか わからなかった**。
+      // 6ふさ・はば .12r で ふっさり させ、ひだりへ ながす
+      // （うしろの たてがみと 向きを そろえる）。
+      const FORE = [["#FF9EC0", -.50, -.74, .46, -.52], ["#FFB6A8", -.30, -.88, .62, -.36],
+                    ["#FFD79A", -.09, -.95, .68, -.20], ["#FFF2A6",  .12, -.94, .64, -.04],
+                    ["#B8EBBE",  .32, -.86, .54,  .12], ["#A8D9F2",  .48, -.72, .42,  .28]];
+      for (const [col, x0, y0, len, tilt] of FORE){
+        g.save(); g.translate(r*x0, r*y0); g.rotate(tilt);
+        g.fillStyle = col;
+        g.beginPath();
+        g.moveTo(-r*.125, 0);
+        g.quadraticCurveTo(-r*.105, r*len*.55, -r*.03, r*len);   // さきを ひだりへ
+        g.quadraticCurveTo(r*.085, r*len*.55, r*.125, 0);
+        g.closePath(); g.fill();
+        g.restore();
+      }
+    }
+    // たてがみ：あたまの ふちに そって にじの ふさを 5つ
+    // つの：まんなか 上。さきは 1.20r（**1.22r を こえない**）
+    g.save();
+    const hg = g.createLinearGradient(0, -r*1.21, 0, -r*.76);
+    hg.addColorStop(0, "#FFF0B8"); hg.addColorStop(1, T.hornC || "#F2C64E");
+    g.fillStyle = hg; g.strokeStyle = T.hornL || "#C99A2B";
+    g.lineWidth = Math.max(.9, r*.028); g.lineJoin = "round";
+    // **ほそく ながく。** ふとくて みじかいと つのでは なく
+    // 「おうかんの かざり」に 見える。さきは 1.21r（1.22r を こえない）。
+    g.beginPath();
+    g.moveTo(-r*.055, -r*.76); g.lineTo(0, -r*1.21); g.lineTo(r*.055, -r*.76);
+    g.closePath(); g.fill(); g.stroke();
+    // つのの うずまき 2本
+    g.strokeStyle = "rgba(201,154,43,.75)"; g.lineWidth = Math.max(.8, r*.026);
+    g.lineCap = "round";
+    for (const yy of [-.90, -1.04]){
+      const w = .048 * (yy < -1 ? .45 : .85);
+      g.beginPath();
+      g.moveTo(-r*w, r*yy);
+      g.lineTo( r*w, r*(yy + .04));
+      g.stroke();
+    }
+    g.restore();
+    // ほおの ちいさな 星（まほうっぽさ）
+    g.fillStyle = "rgba(255,255,255,.85)";
+    sparkle4(g, r*.66, -r*.30, r*.10, "rgba(255,255,255,.9)");
+  }
+
+  // ドラゴン。**はねは つけない。** よこに 張り出すと ぎゅうぎゅうの ばんめんで
+  // となりに かぶる（ぞうの はなと 同じ 理由）。つのと きばだけで 十分 読める。
+  if (T.face === "dragon"){
+    // せなかの とげ 3つ（あたまの 上。1.15r いない）
+    g.fillStyle = T.spike || "#E9C46A"; g.strokeStyle = T.line;
+    g.lineWidth = Math.max(.9, r*.032); g.lineJoin = "round";
+    for (const [ox, sc] of [[-.30, .72], [0, 1], [.30, .72]]){
+      g.beginPath();
+      g.moveTo(r*(ox - .075*sc), -r*.90);
+      g.lineTo(r*ox,             -r*(.90 + .22*sc));
+      g.lineTo(r*(ox + .075*sc), -r*.90);
+      g.closePath(); g.fill(); g.stroke();
+    }
+    // つの 2本。**ながい 2本ストロークに しない こと。**
+    // ふとさの 変わらない ながい 線に して いた ときは、
+    // つのでは なく **金色の バナナ／触角** に 見えた。
+    // ねもとを ふとく・さきを ほそくした 三日月に する。さきは 1.13r いない。
+    for (const s2 of [-1,1]){
+      g.save(); g.translate(s2*r*.44, -r*.66); g.scale(s2, 1);
+      g.fillStyle = T.hornC || "#F0D08A";
+      g.strokeStyle = T.hornL || "#B8873A"; g.lineWidth = Math.max(.9, r*.030);
+      g.lineJoin = "round";
+      g.beginPath();
+      // さきは 中心から 1.19r。**1.22r を こえない こと**（となりの子に かぶる）
+      g.moveTo(-r*.10, r*.11);                                  // ねもと そと
+      g.quadraticCurveTo(r*.09, -r*.09, r*.26, -r*.30);         // さきへ
+      g.quadraticCurveTo(r*.15, -r*.08, r*.09, r*.10);          // うちがわを もどる
+      g.closePath(); g.fill(); g.stroke();
+      g.restore();
+    }
+    // マズル（はなづら）。**おなかの おびに しては いけない。**
+    // よこ .46r・たて .30r の 大きな おびに して いた ときは、
+    // かおの 下半分を おおって「あごひげ」に 見えた。これは かおで あって 体では ない。
+    g.save();
+    g.fillStyle = T.tan || "#FFF0CE";
+    g.beginPath(); g.ellipse(0, r*.30, r*.30, r*.205, 0, 0, 7); g.fill();
+    g.restore();
+    // きば：くちの 両はしから 下に ちょこん。
+    // はなと くちは ふつうの えがき方に まかせる（ここで 足すと ごちゃつく）。
+    g.fillStyle = "#FFFBF2"; g.strokeStyle = "#DCCBAF"; g.lineWidth = Math.max(.8, r*.02);
+    for (const s2 of [-1,1]){
+      g.beginPath();
+      g.moveTo(s2*r*.105, r*.28);
+      g.lineTo(s2*r*.185, r*.28);
+      g.lineTo(s2*r*.142, r*.45);
+      g.closePath(); g.fill(); g.stroke();
+    }
+  }
+
   if (T.face === "pig"){
     // はなは すこし ちいさく・上へ。前は 顔が よこに 広がって「まんじゅう」に 見えていた
     g.fillStyle = "#FF9DB4";
@@ -2627,7 +2966,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
 
   if (shock && kind === 2){
     // せり上がり：ぷるぷる した くち
-    const my = T.face === "pig" ? r*.58 : ((T.face === "koala" || T.face === "cow") ? r*.62 : r*.245);
+    const my = (T.face === "pig" || T.face === "boar") ? r*.58 : ((T.face === "koala" || T.face === "cow") ? r*.62 : r*.245);
     if (T.face === "chick"){
       g.save();
       g.translate(0, my - r*.03); g.rotate(Math.sin(phase*19)*.28);
@@ -2675,7 +3014,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     } else if (MR.noMouth){
       // 口の ない かお（ぞう）。あけた口も えがかない。mouthRule を 見ること
     } else {
-      const oy = T.face === "pig" ? r*.34 : ((T.face === "koala" || T.face === "cow") ? r*.38 : 0);
+      const oy = (T.face === "pig" || T.face === "boar") ? r*.34 : ((T.face === "koala" || T.face === "cow") ? r*.38 : 0);
       g.fillStyle = MC;
       g.beginPath(); g.ellipse(0, r*.245 + oy, r*.072, r*.092, 0, 0, 7); g.fill();
       g.fillStyle = TG;
@@ -2722,7 +3061,7 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
     g.moveTo(-r*.15, r*.2); g.lineTo(r*.15, r*.2); g.lineTo(0, r*.4);
     g.closePath(); g.fill();
   } else {
-    const my = (T.face === "koala" || T.face === "cow") ? r*.62 : (T.face === "pig" ? r*.58 : (T.face === "dog" ? r*.24 : r*.2));
+    const my = (T.face === "koala" || T.face === "cow") ? r*.62 : (T.face === "pig" ? r*.58 : (T.face === "boar" ? r*.56 : (T.face === "dog" ? r*.24 : r*.2)));
     // はな（ぶたは 大きな はなが すでに あるので えがかない）
     if (MR.bigNose){
       g.strokeStyle = "#5C463C"; g.lineWidth = Math.max(1, r*.045); g.lineCap = "round";
@@ -2804,6 +3143,31 @@ const THEMES = [
     panel:"rgba(255,252,254,.6)", stripe:"rgba(255,199,222,.30)", dot:"rgba(255,255,255,.65)",
     wall:"#f7a8c4", wallIn:"#ffe4ef", cush:"#fbbcd4", ribbon:["#ffd6e6","#ff9dc0"],
     page:"linear-gradient(180deg,#ffe2f0 0%,#fff0f6 55%,#fff8ec 100%)" },
+  // ここから 3つは 2026-09-12 に 足した ぶん。
+  // **えらんだ すじ道は「まだ 空いて いる 色」。**
+  // 寒色の 白系・灰色系・金色系が 1つも なかった。
+  // どれも **カゴの 中（panel / stripe）は 明るいまま**に して ある。
+  // 暗く すると いぬ（ほぼ黒）と たぬき（こげ茶）が 沈んで 見えなく なる。
+  { nm:"ゆきのひ",
+    sky:["#c6dff3","#dceaf7","#eef5fb","#fffdf8"], rainbow:false, orb:"sun", orbC:"#FFF6D8",
+    // ゆきを 白に したら **空も 白いので 1つも 見えなかった**（めじろの おばねと 同じ 失敗）。
+    // 下じきより ひとだん こい 水色に する こと。
+    deco:["w","w"], decoC:["#8fb8d8","#b6d2e8"], cloud:"rgba(255,255,255,.9)",
+    panel:"rgba(255,255,255,.62)", stripe:"rgba(200,222,240,.28)", dot:"rgba(255,255,255,.66)",
+    wall:"#a9c4dd", wallIn:"#e8f2fb", cush:"#c2d8ea", ribbon:["#dceaf7","#a9c4dd"],
+    page:"linear-gradient(180deg,#dbeaf7 0%,#eef5fb 55%,#fffdf8 100%)" },
+  { nm:"あめあがり",
+    sky:["#8fa3b8","#b8c6d4","#dde6ee","#fff3e2"], rainbow:true, orb:"sun", orbC:"#FFEEB0",
+    deco:["r","b"], decoC:["#cfe4f2","#ffffff"], cloud:"rgba(255,255,255,.75)",
+    panel:"rgba(252,254,255,.60)", stripe:"rgba(178,198,216,.28)", dot:"rgba(255,255,255,.62)",
+    wall:"#93aec6", wallIn:"#e4eef6", cush:"#aec6da", ribbon:["#d6e7f2","#93aec6"],
+    page:"linear-gradient(180deg,#8fa3b8 0%,#c6d4e0 55%,#fff3e2 100%)" },
+  { nm:"くものうえ",
+    sky:["#bcd8f5","#ffffff","#fff6dd","#fffaf0"], rainbow:false, orb:"sun", orbC:"#FFE9A0",
+    deco:["b","s"], decoC:["#ffffff","#ffd075"], cloud:"rgba(255,255,255,.95)",
+    panel:"rgba(255,253,246,.62)", stripe:"rgba(255,226,170,.26)", dot:"rgba(255,255,255,.70)",
+    wall:"#f0d59a", wallIn:"#fff8e6", cush:"#f7e2b8", ribbon:["#fff0cc","#f0d59a"],
+    page:"linear-gradient(180deg,#bcd8f5 0%,#ffffff 50%,#fff6dd 100%)" },
   { nm:"みどりのおか",
     sky:["#c8ecff","#e2f6dd","#f2fbe4","#fffbe8"], rainbow:true, orb:"sun", orbC:"#FFEE9C",
     deco:["s","h"], decoC:["#fff3a8","#ffd6e6"], cloud:"rgba(255,255,255,.85)",
@@ -2811,6 +3175,20 @@ const THEMES = [
     wall:"#a9d68c", wallIn:"#eafadd", cush:"#bfe0a4", ribbon:["#e2f5cf","#a9d68c"],
     page:"linear-gradient(180deg,#d8f0ff 0%,#eafadf 55%,#fffbe8 100%)" },
 ];
+/* 隠しテーマ「ほしぞら」。タイトルの 絵を 7回 なでると 出るように なる。
+   ふだんの `pick(THEMES)` には 入れない（下の themePool）。
+   よぞら と かぶらないよう、こちらは **夜なのに にじが 出る** ことに した。 */
+const STAR_THEME = {
+  nm:"ほしぞら",
+  sky:["#2b2a55","#4a3c7a","#7d5a9c","#f0c2d8"], rainbow:true, orb:"moon", orbC:"#FFF8D8",
+  deco:["s","s"], decoC:["#fff3a8","#ffffff"], cloud:"rgba(255,255,255,.30)",
+  panel:"rgba(250,248,255,.46)", stripe:"rgba(170,150,225,.30)", dot:"rgba(255,255,255,.62)",
+  wall:"#9c85d6", wallIn:"#e6dcff", cush:"#b09bdf", ribbon:["#ded0ff","#b49af0"],
+  page:"linear-gradient(180deg,#2b2a55 0%,#6f5aa0 55%,#f2d8e6 100%)" };
+let starUnlocked = false;
+try { starUnlocked = localStorage.getItem("mamemaru-star") === "1"; } catch(e){}
+function themePool(){ return starUnlocked ? THEMES.concat([STAR_THEME]) : THEMES; }
+
 let TH = THEMES[0];
 
 const DECO = [];
@@ -2822,11 +3200,26 @@ function reseedDeco(){
                 ph: rnd(0, 6.3), rot: rnd(0, 6.3) });
   }
 }
+/* つぎの 1ゲームだけ この けしきに する、という よやく。
+   ほしぞらを 解放した ときと、あいことばで けしきを えらんだ ときに 入る。
+   **1回 つかったら すぐ 空に する。** のこすと ずっと 同じ けしきに なって、
+   「まいかい ちがう」という 気もちよさが 消える。 */
+let pinnedTheme = null;
+function pinTheme(nm){
+  const t = themePool().find(x => x.nm === nm);   // 解放前の ほしぞらは 見つからない
+  if (!t) return null;
+  pinnedTheme = t;
+  return "つぎの ゲームは 「" + nm + "」 だよ";
+}
+
 function pickTheme(){
   skyKey = ""; panKey = "";
-  let t = TH, guard = 0;
-  while (t === TH && guard++ < 8) t = pick(THEMES);
-  TH = t;
+  if (pinnedTheme){ TH = pinnedTheme; pinnedTheme = null; }
+  else {
+    let t = TH, guard = 0;
+    while (t === TH && guard++ < 8) t = pick(themePool());   // ほしぞらは 解放後だけ 入る
+    TH = t;
+  }
   reseedDeco();
   document.body.style.background = TH.page;
 }
@@ -2947,6 +3340,24 @@ function drawBackground(){
       ctx.beginPath(); ctx.arc(x, y, d.s*.8, 0, 7); ctx.fill();
       ctx.globalAlpha = .7; ctx.fillStyle = "#ffffff";
       ctx.beginPath(); ctx.arc(x - d.s*.28, y - d.s*.28, d.s*.22, 0, 7); ctx.fill();
+    } else if (d.t === "w"){   // w = ゆき（まるい 粒＋ほそい 6すじ）
+      ctx.beginPath(); ctx.arc(x, y, d.s*.40, 0, 7); ctx.fill();
+      ctx.save();
+      ctx.strokeStyle = d.c; ctx.lineWidth = Math.max(.7, d.s*.15); ctx.lineCap = "round";
+      ctx.translate(x, y); ctx.rotate(d.rot + time*.25);
+      for (let k = 0; k < 3; k++){
+        ctx.beginPath(); ctx.moveTo(-d.s*.68, 0); ctx.lineTo(d.s*.68, 0); ctx.stroke();
+        ctx.rotate(Math.PI/3);
+      }
+      ctx.restore();
+    } else if (d.t === "r"){   // r = あめつぶ（しずく）
+      ctx.save(); ctx.translate(x, y);
+      ctx.beginPath();
+      ctx.moveTo(0, -d.s*.85);
+      ctx.quadraticCurveTo(d.s*.44, d.s*.16, 0, d.s*.58);
+      ctx.quadraticCurveTo(-d.s*.44, d.s*.16, 0, -d.s*.85);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
     } else {  // p = はなびら
       ctx.save();
       ctx.translate(x, y); ctx.rotate(d.rot + time*.9 + Math.sin(time + d.ph)*.5);
@@ -3444,7 +3855,7 @@ function drawClearText(){
 
   ctx.font = `bold ${size*.3}px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif`;
   ctx.lineWidth = size*.1; ctx.strokeStyle = "#ffffff";
-  const sub = clearFx.n + "にん おそうじ ＋" + Math.ceil(clearFx.n/3) + "てん";   // 実加算（clearAll）と そろえる
+  const sub = clearFx.n + "にん おそうじ ＋" + Math.ceil(clearFx.n/3) + "点";   // 実加算（clearAll）と そろえる
   ctx.strokeText(sub, 0, size*.82);
   ctx.fillStyle = "#7a6154";
   ctx.fillText(sub, 0, size*.82);
@@ -3846,9 +4257,11 @@ function gameOver(byUser){
       setTimeout(() => beep(f, .26, "sine", .075), i*150));
   }
   const sc = scoreNow();
-  const isRec = sc > bestRef();
+  // にじいろの 回は 記録に 残さない（上の SHIRITORI の 説明を 見ること）。
+  // ⭐も ふやさない。かいすうだけ かぞえる。
+  const isRec = !rainbowRun && sc > bestRef();
   if (isRec) setBestRef(sc);
-  stampTotal += stamps;
+  if (!rainbowRun) stampTotal += stamps;
   plays++;
   saveRec();
   if (isRec) setTimeout(() => { [784,988,1175,1568].forEach((f,i) =>
@@ -3860,13 +4273,15 @@ function gameOver(byUser){
   overlay.classList.add("result");
   overlay.innerHTML = `
     <div class="panel">
-      <h1>${isRec ? "あたらしい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
-      <div class="big">${sc} <span style="font-size:16px">てん</span></div>
+      <h1>${rainbowRun ? "にじいろ おつかれさま！ 🌈"
+            : isRec ? "あたらしい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
+      <div class="big">${sc} <span style="font-size:16px">点</span></div>
       <p class="calc">みおくり ${popScore} ＋ じかん ${timeScore()} ＋ れんさ ${chainScore} ＋ おそうじ ${clearScore}</p>
       <p class="rank">${rankOf(sc)}</p>
       <p>つぎの目標：${next}</p>
       <p class="ms-got">⭐ おだい ${stamps} こ たっせい</p>
-      <p style="font-size:10px;color:#b79aa8">モード：${modeName}</p>
+      <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
+        rainbowRun ? " ／ 🌈 にじいろ（きろくには のこりません）" : ""}</p>
       <div class="btnrow">
         <button class="btn" id="againBtn">もういちど</button>
         <button class="btn sub" id="quitBtn">おわる</button>
@@ -3918,9 +4333,60 @@ function safeNum(x){
   if (!isFinite(n) || n < 0) return 0;
   return Math.min(n, 999999);
 }
+/* ============================================================
+   隠しコマンド「あいことば」
+   ------------------------------------------------------------
+   きろくの よみこみ欄は、ふだん コード以外を 入れると
+   「もじれつが ちがうみたい…」と 出るだけ。そこに ことばを 仕込んで ある。
+   **記録には いっさい さわらない。** 出るのは ことばと 絵の うごきだけ。
+   足すなら この ひょうに 1行 足すだけで よい。
+   「ひみつ」は **しりとりの ヒント**に して、隠しコマンドどうしを つないで ある。
+   ============================================================ */
+const SECRET_WORDS = {
+  "まめまる":   () => { hopAll(true); return "よんだ？"; },
+  "ひみつ":     () => "なまえを ならべて しりとりが できるよ",
+  "しりとり":   () => "6ひき つながるのは 1とおりだけ。「ん」で おわるよ",
+  "ありがとう": () => { hopAll(true); return "こちらこそ ありがとう！"; },
+  // ほしぞらは 解放ずみ なら えらべる。まだなら ヒントだけ。
+  "ほしぞら":   () => starUnlocked ? pinTheme("ほしぞら") : "そらは なでると 出るよ",
+
+  // --- シークレットの なかま。解放すると えらび画面に ずっと 出る ---
+  "い":         () => gainChar("いのしし"),
+  "ユニコーン": () => gainChar("ユニコーン"),
+  "たつ":       () => gainChar("ドラゴン"),
+};
+
+/* シークレットを 解放して、その場で えらび画面を 見せる。
+   「解放しました」と 出すだけでは **どこで つかえるのか わからない**
+   （ほしぞらで 同じ ことを 言われた）。だから 少し おいて
+   えらび画面を ひらき、あたらしい子が ならんで いる ところを 見せる。 */
+function gainChar(nm){
+  const isNew = unlockChar(nm);
+  setTimeout(() => { closeSave(); showCharSelect(); }, 1100);
+  return isNew ? nm + " が なかまに なったよ！ 🎉"
+               : nm + " は もう なかまだよ";
+}
+
 function loadFromCode(){
   const v = (loadCode.value || "").trim();
   if (!v){ saveMsg.textContent = "もじれつを はりつけてね"; return; }
+  // あいことばが さきに 当たるか みる（コードの かたち検査より 前）
+  const say = (txt) => {
+    saveMsg.textContent = "🌸 " + txt;
+    loadCode.value = "";
+    beep(660, .1, "triangle", .08);
+    setTimeout(() => beep(880, .14, "triangle", .08), 110);
+  };
+  if (Object.prototype.hasOwnProperty.call(SECRET_WORDS, v)){
+    say(SECRET_WORDS[v]());
+    return;
+  }
+  // **けしきの 名前は そのまま あいことばに なる。**
+  // ゆきのひ／あめあがり／くものうえ だけで なく、はれのひ や さくら など
+  // ぜんぶ 効く。ひょうに 書き足す ひつようは ない（themePool を 見て いる）。
+  // 解放前の ほしぞらは pool に いない ので ここでは 当たらない。
+  const pinned = pinTheme(v);
+  if (pinned){ say(pinned); return; }
   if (v.length > 400){ saveMsg.textContent = "もじれつが ながすぎます"; return; }
   if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.textContent = "もじれつが ちがうみたい…"; return; }
   try {
@@ -3933,8 +4399,14 @@ function loadFromCode(){
     plays      = Math.max(plays,      safeNum(o.p));
     best = Math.max(best, bestRef());
     saveRec(); updateHUD();
+    // **タイトルの 表示も つくりなおす。**
+    // ここを 忘れて いて、よみこんだ あと さいこう点が 画面に 出ず、
+    // モードの ボタンを 押して はじめて 出て いた（paint が そこでしか
+    // よばれて いなかった）。さいこう点・称号・⭐・かいすう・
+    // 「えらべるよ」の ひとこと、ぜんぶ ここで 直る。
+    if (titlePaint) titlePaint();
     saveCode.value = myCode();
-    saveMsg.textContent = "よみこみました！ さいこう " + bestRef() + "てん";
+    saveMsg.textContent = "よみこみました！ さいこう " + bestRef() + "点";
   } catch(e){
     saveMsg.textContent = "もじれつが ちがうみたい…";
   }
@@ -3976,8 +4448,62 @@ function rollTitleCast(){
   TITLE_CAST = TITLE_SLOTS.map((s, i) => {
     const pad = s.r * 1.2 + 3;                        // みみが 画面の外に 出ないように
     const x = Math.max(pad, Math.min(TAW - pad, flip ? TAW - s.x : s.x));
-    return { t: idx[i], x, r: s.r, ph: s.ph + rnd(0, 1.6) };
+    return { t: idx[i], x, r: s.r, ph: s.ph + rnd(0, 1.6), hop0: -9 };
   });
+}
+
+/* ============================================================
+   隠しコマンド「なでる」
+   ------------------------------------------------------------
+   タイトルの 絵の 子を つつくと ぴょこんと 跳ねる。
+   **7回で 隠しテーマ「ほしぞら」が 出るように なる**（ずっと のこる）。
+   かぞえる のは のべ回数で、同じ子を 7回でも よい。
+
+   跳ねる 高さは `time` から その場で 出す（`hop0` に 跳ね はじめた 時刻を 入れる）。
+   別に タイマーを 持たない こと：タイトルの 絵は
+   ゲーム画面とは べつの コマ数で まわって いるので、
+   dt を かぞえると ずれる。
+   ============================================================ */
+const PET_GOAL = 7, HOP_SEC = .42;
+let petCount = 0;
+function hopOne(c){ if (c) c.hop0 = time; }
+function hopAll(stagger){
+  (TITLE_CAST || []).forEach((c, i) => { c.hop0 = time + (stagger ? i*.07 : 0); });
+}
+function hopY(c){                       // いまの 跳ね上がり（px、上が マイナス）
+  const k = (time - c.hop0) / HOP_SEC;
+  return (k >= 0 && k < 1) ? -Math.sin(k*Math.PI) * c.r * .8 : 0;
+}
+function petAt(px, py){
+  if (!TITLE_CAST) return;
+  let hit = null, bestD = 1e9;
+  for (const c of TITLE_CAST){
+    const cy = TGY - c.r;               // えがく ときの 中心（bob は 誤差の うち）
+    const d = Math.hypot(px - c.x, py - cy);
+    if (d < c.r * 1.25 && d < bestD){ bestD = d; hit = c; }
+  }
+  if (!hit) return;
+  hopOne(hit);
+  beep(560 + ((Math.random()*4)|0)*90, .07, "sine", .06);
+  if (starUnlocked) return;             // もう 出して あるなら かぞえない
+  petCount++;
+  if (petCount >= PET_GOAL){
+    starUnlocked = true;
+    try { localStorage.setItem("mamemaru-star", "1"); } catch(e){}
+    hopAll(true);
+    [784, 988, 1175, 1568].forEach((f, i) =>
+      setTimeout(() => beep(f, .2, "triangle", .11), i*95));
+    // **解放した ことが わかる ように、つぎの ゲームを その けしきに する。**
+    // 「いつか ランダムで 出ます」だけでは 解放されたのか どうか わからない。
+    pinTheme("ほしぞら");
+    showPetMsg("🌟 ほしぞら が でるように なったよ！ つぎの ゲームは ほしぞら");
+  }
+}
+function showPetMsg(txt){
+  const el2 = document.getElementById("petMsg");
+  if (!el2) return;
+  el2.textContent = txt;
+  el2.classList.remove("hidden");
 }
 function initTitleArt(){
   rollTitleCast();                                    // まいかい ちがう なかまが 出る
@@ -3987,6 +4513,21 @@ function initTitleArt(){
   c.width = TAW*dpr; c.height = TAH*dpr;
   tctx = c.getContext("2d");
   tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // つつけるように する。タイトルは 作りなおされる ので 毎回 つけなおす。
+  // CSS で よこはばが 変わる ので、見た目の 大きさから もとの ものさしに 直す。
+  c.style.cursor = "pointer";
+  // **2回 つけない こと。** initTitleArt() は bindTitleButtons() と
+  // hideCharSelect() の 両方から よばれる。canvas は 同じ ものが のこる ので、
+  // まもらないと 1回 つつくと 2回 かぞえて しまう。
+  if (!c.dataset.petBound){
+  c.dataset.petBound = "1";
+  c.addEventListener("pointerdown", (e) => {
+    const rc = c.getBoundingClientRect();
+    if (!rc.width || !rc.height) return;
+    petAt((e.clientX - rc.left) * (TAW / rc.width),
+          (e.clientY - rc.top)  * (TAH / rc.height));
+  });
+  }
 }
 function drawTitleArt(){
   if (!tctx || state !== "title") return;
@@ -4029,7 +4570,7 @@ function drawTitleArt(){
     g.globalAlpha = .1; g.fillStyle = "#8a5f70";
     g.beginPath(); g.ellipse(c.x, TGY + 1, c.r*.8, c.r*.18, 0, 0, 7); g.fill();
     g.globalAlpha = 1;
-    g.translate(c.x, TGY - c.r + bob);
+    g.translate(c.x, TGY - c.r + bob + hopY(c));      // つつかれると ぴょこん
     drawCreature(g, c.t, c.r, c.ph + time*.4, bl, 0, sm, 0, 1);
     g.restore();
   }
@@ -4062,7 +4603,12 @@ function initCharSelect(){
       orderEl.innerHTML = '<div class="empty">えらぶと ここに ならびます</div>';
       return;
     }
-    orderEl.innerHTML = '<div class="ttl">おおきい → ちいさい（くっつくと 右へ）</div>';
+    // しりとりが そろったか（順番も ふくめて）
+    const hit = isShiritori(idxs.map(k => ALL_CHARACTERS[k]));
+    orderEl.classList.toggle("shiritori", hit);
+    orderEl.innerHTML = hit
+      ? '<div class="ttl">🌈 しりとり！ さいごが「ん」で おわっちゃった 🌈</div>'
+      : '<div class="ttl">おおきい → ちいさい（くっつくと 右へ）</div>';
     const row = document.createElement("div");
     row.className = "row";
 
@@ -4101,6 +4647,20 @@ function initCharSelect(){
     LAST = TIERS.length - 1;
 
     orderEl.appendChild(row);
+    if (hit){
+      const p = document.createElement("div");
+      p.className = "sh";
+      p.textContent = "にじいろ まめまる で あそべるよ（きろくには のこりません）";
+      orderEl.appendChild(p);
+      // そろった しゅんかんだけ ファンファーレ。えがきなおすたび 鳴らさない
+      if (!orderEl.dataset.rang){
+        orderEl.dataset.rang = "1";
+        [784, 988, 1175, 1568].forEach((f, i) =>
+          setTimeout(() => beep(f, .18, "triangle", .10), i*95));
+      }
+    } else {
+      delete orderEl.dataset.rang;
+    }
   };
 
   const paintCount = () => {
@@ -4108,8 +4668,11 @@ function initCharSelect(){
     selectBtn.disabled = selected.size !== 6;
     // バッジを 何ばんめに えらんだかの 数字に する
     const idxs = Array.from(selected);
-    grid.querySelectorAll(".charCard").forEach((el, i) => {
-      const n = idxs.indexOf(i);
+    // **カードの ならび順 ≠ ALL_CHARACTERS の ばんごう。**
+    // 未解放の 子を とばして いる ので、`dataset.ci` に もとの ばんごうを
+    // 入れて おいて、そちらで つきあわせる。
+    grid.querySelectorAll(".charCard").forEach((el) => {
+      const n = idxs.indexOf(+el.dataset.ci);
       const ck = el.querySelector(".checkmark");
       if (ck) ck.textContent = n < 0 ? "" : String(n + 1);
     });
@@ -4124,8 +4687,12 @@ function initCharSelect(){
   ALL_CHARACTERS.forEach(c => TIERS.push(c));
 
   ALL_CHARACTERS.forEach((char, idx) => {
+    // **まだ 解放して いない シークレットは カードを 作らない。**
+    // かくすだけ（display:none）に すると、開発者ツールで 見えて しまう ほか、
+    // `paintCount()` の カード数と ずれる。そもそも 作らない こと。
+    if (!isUsable(char)) return;
     const card = document.createElement("div");
-    card.className = "charCard";
+    card.className = "charCard" + (char.secret ? " secretCard" : "");
 
     const cvs = document.createElement("canvas");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -4149,6 +4716,7 @@ function initCharSelect(){
     ck.className = "checkmark";
 
     card.appendChild(cvs); card.appendChild(nm); card.appendChild(ck);
+    card.dataset.ci = String(idx);          // ALL_CHARACTERS の ばんごう
     card.addEventListener("click", () => {
       if (selected.has(idx)){
         selected.delete(idx); card.classList.remove("selected");
@@ -4277,8 +4845,8 @@ function bindTitleButtons(){
     if (rec){
       const b = bestRef();
       rec.innerHTML = b > 0
-        ? `さいこう ${b}てん ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}かいめ</span>`
-        : `<span>まずは 20てん を めざそう</span>`;
+        ? `さいこう ${b}点 ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}かいめ</span>`
+        : `<span>まずは 20点 を めざそう</span>`;
     }
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
@@ -4286,6 +4854,7 @@ function bindTitleButtons(){
     if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
     updateHUD();
   };
+  titlePaint = paint;      // よみこみ などからも よべる ように しておく
   if (calm) calm.addEventListener("click", () => {
     calmFx = !calmFx;
     try { localStorage.setItem("mamemaru-calm", calmFx ? "1" : "0"); } catch(e){}
@@ -4329,7 +4898,7 @@ function rankOf(n){
 }
 function nextGoal(n){
   const goal = RANK_STEPS.find(s => s > n) || (n + 60);
-  return `${goal}てん（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
+  return `${goal}点（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
 }
 
 
@@ -4357,9 +4926,28 @@ function start(){
   overlay.classList.remove("result");
   
   applySelectedTiers();
-  
+
+  // しりとりを そろえた 回だけ にじいろに する。
+  // **ひかる 段は 5（いちばん小さい子）の まま。かくりつだけ 1/28 → 1/2。**
+  //
+  // ひかる 段を 下げる 案（段3・1/5）も 作って 実測した。派手には なるが、
+  // 全消しが 早い 段で 起きるので **いちばん 小さい子が たまる前に 消えて しまい、
+  // みおくりが 7回まで 落ちた**（ふつうは 18〜26回）。このゲームで いちばん
+  // いい 瞬間を、隠しコマンドが うばって いた。6回×4設定の 実測（中央値）：
+  //
+  //   段3・1/5 → スコア79 / みおくり 7 / おそうじ42
+  //   段4・1/4 → スコア60 / みおくり 8 / おそうじ35
+  //   段5・1/2 → スコア69 / みおくり18 / おそうじ29   ← これ
+  //
+  // 段5・1/2 なら みおくりは ふつうと 同じ 回数 のこり、そのうえで
+  // **みおくる たびに 半分は 全消し**に なる。いちばん いい 瞬間を
+  // うばうのでは なく 増やす 形。100% に しないのも 同じ りくつ。
+  rainbowRun  = isShiritori(selectedTiers);
+  sparkleRate = rainbowRun ? 1/2 : SPARKLE_RATE;
+  sparkleTier = rainbowRun ? 5   : SPARKLE_TIER;
+
   reset();
-  
+
   state = "play";
   if (!AC && soundOn){ try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
   if (AC && AC.state === "suspended") AC.resume();
