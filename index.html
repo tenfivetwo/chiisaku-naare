@@ -207,6 +207,15 @@
      **パネルの 左右に はみ出す**（#chain と 同じ しばりに そろえて ある）。 */
   /* 隠しコマンドの ひとこと。ふだんは hidden なので たての 予算を 食わない。 */
   #overlay p.petMsg { font-size: 11px; color: #b98ac4; margin: -2px 0 0; }
+  /* 称号の ごほうび。**なでる の ひとこと（petMsg）とは べつの 場所**に する。
+     petMsg は 絵の すぐ下＝なでた子の 反応を 出す ところ。
+     こちらは「よみこみの はこに 入れて」と 言う ので、
+     **その ボタンの すぐ上**に 置く。つかう場所の となりで 言うのが いちばん 効く。 */
+  #overlay p.hintMsg {
+    font-size: 12.5px; color: #c4568a; margin: 6px 0 2px;
+    background: #fff2f7; border: 1px solid #ffd9e7;
+    border-radius: 999px; padding: 6px 14px; line-height: 1.5;
+  }
 
   /* 1回 遊んだ あとだけ 出る ひとこと。えらび画面を 最初に 出さない かわり。 */
   #overlay p.pickHint { font-size: 11px; color: #e08aa8; margin-top: -4px; }
@@ -410,7 +419,7 @@
     <div id="overlay">
       <h1>まめまる</h1>
       <canvas id="titleCv"></canvas>
-      <p class="petMsg hidden" id="petMsg"></p>
+      <p class="petMsg wide hidden" id="petMsg"></p>
       <p class="lead">
         おなじ子が くっつくと <b>ちいさく</b> なる。<br>
         <span class="lastName">いちばん ちいさい子</span>を <b>おおく みおくる</b>ほど 高とくてん。<br>
@@ -425,6 +434,7 @@
       <p class="myrec" id="myRec"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
       <button class="btn" id="startBtn">はじめる</button>
+      <p class="hintMsg wide hidden" id="hintMsg"></p>
       <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
       <button class="link" id="editCharBtn">まめまるを えらびなおす</button>
       <p class="pickHint hidden" id="pickHint">すきな まめまる を 6つ えらべるよ ✨</p>
@@ -4206,12 +4216,21 @@ function clampX(x, r){
 // じゃまに するのは `b.overLine`（＝OVER 判定と 同じ 基準で ラインを こえて
 // おちついて いる子）だけ。とんでいる子・のぼっている子は かぞえない。
 // **この きじゅんを 独自の ものに しないこと**（はやすぎ／おそすぎで どちらも こわれる）。
-function columnBlocked(x, r){
+function columnBlocked(x, r, tier){
+  // よこが かさなる 子の うち、**いちばん 上の子**＝さきに ぶつかる子 を さがす。
+  let top = null;
   for (const b of balls){
     if (!b.overLine || b.merging || b.dead) continue;
-    if (Math.abs(b.x - x) < b.r + r) return true;   // よこが かさなる ＝ その列は つまっている
+    if (Math.abs(b.x - x) >= b.r + r) continue;     // よこが かさならない ＝ その子は 関係ない
+    if (top === null || b.y < top.y) top = b;
   }
-  return false;
+  if (!top) return false;
+
+  // **おなじ子なら 落とせる。** ぶつかった しゅんかん 合体して 1つ 小さく なるので、
+  // 山を ふやすのでは なく へらす。つまった ときの 逃げ道に なり、
+  // 「同じ子を 見つける」という この ゲームの 本筋が そのまま 助けに なる。
+  // 下に べつの子が いても 見ない。さきに さわるのは 上の子 だけなので。
+  return top.tier !== tier;
 }
 
 function drop(){
@@ -4219,7 +4238,7 @@ function drop(){
   
   // おとそうと して いる 列が つまって いたら おとさない（ほかの 列は おとせる）
   const dropX = clampX(aimX, held.r);
-  if (columnBlocked(dropX, held.r)){
+  if (columnBlocked(dropX, held.r, held.tier)){
     beep(330, .15, "sine", .05);      // 「ここには おとせない」の あいず
     return;
   }
@@ -4264,6 +4283,12 @@ function gameOver(byUser){
   if (!rainbowRun) stampTotal += stamps;
   plays++;
   saveRec();
+  // 称号に とどいたら、あいことばの 入口を ひとつ 教える。
+  // **結果画面には 出さない。** ここは もう 8項目 あり、記録更新の ときは
+  // 「きろくを ほぞん」まで 増えて いちばん 混む。点数が うもれる。
+  // 出すのは タイトルに もどった とき。よみこみの ボタンが そこに あるので、
+  // **つかう場所の となりで 言える。**
+  checkRankHint();
   if (isRec) setTimeout(() => { [784,988,1175,1568].forEach((f,i) =>
     setTimeout(() => beep(f, .2, "triangle", .12), i*90)); }, 420);
 
@@ -4858,6 +4883,10 @@ function bindTitleButtons(){
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
     if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
+    if (titleHintMsg){                            // タイトルは 作りなおされる ので 毎回
+      const hm = document.getElementById("hintMsg");
+      if (hm){ hm.textContent = titleHintMsg; hm.classList.remove("hidden"); }
+    }
     updateHUD();
   };
   titlePaint = paint;      // よみこみ などからも よべる ように しておく
@@ -4907,6 +4936,62 @@ function nextGoal(n){
   return `${goal}点（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
 }
 
+/* ============================================================
+   称号に とどいたら、あいことばの「入口」を 1つ 教える
+   ============================================================
+   ねらいは **言葉を くばる ことでは なく、「よみこみの はこは
+   言葉も うけつける」と 気づいて もらう こと。**
+   ここが 見えて いないと、しりとりも シークレットも 一生 見つからない。
+
+   **ベストスコアを 引き金に しては いけない。**
+   1回目は かならず ベスト、2〜5回目も ほぼ 確実に 更新する。
+   つまり **いちばん 何も 分かって いない 時期に 大量に 出て、
+   分かって きた ころに 枯れる**（順序が さかさま）。
+   おまけに 記録は モード別なので 同じ ごほうびが 2周する。
+   称号は 15/25/…/310 の 固定の はしごで、一度きり・順番どおり・
+   後もどり しない。引き金には こちらを つかう。
+
+   **キャラの あいことば（い／ユニコーン／たつ）は ここでは 出さない。**
+   「この言葉を 入れてね」と 書いて 入力させるのは、キャラを 直接
+   あげる ことの 回りくどい版 でしかない。秘密が 作業に なる。
+   出すのは **答えでは なく 入口**。 */
+const RANK_HINTS = [
+  { at: 15, word: null },            // null＝けしきの名前を その場で ひとつ 選ぶ
+  { at: 50, word: "ひみつ" },         // → しりとりへ
+  { at: 95, word: "しーくれっと" },   // → シークレット3体へ
+];
+let hintsGiven = 0;
+try { hintsGiven = Math.max(0, Math.min(RANK_HINTS.length,
+        parseInt(localStorage.getItem("mamemaru-hint") || "0", 10) || 0)); } catch(e){}
+
+/* タイトルに 出す ひとこと。**タイトルは innerHTML で 作りなおされる**ので、
+   1回 書いて おわりに せず、paint() から 毎回 書きなおす。
+   けす のは start()（つぎの ゲームが 始まる とき）。 */
+let titleHintMsg = "";
+
+function checkRankHint(){
+  if (hintsGiven >= RANK_HINTS.length) return;
+  // **モードを またいだ ひとつの はしご**に する（記録は モード別なので、
+  // そのまま だと 同じ ごほうびが 2周する）。
+  const top = Math.max(bestEver, bestFreeEver);
+  const h = RANK_HINTS[hintsGiven];        // いちばん 下の まだ 出して いないもの
+  if (top < h.at) return;
+
+  // **いちどに 1つだけ。** 大きく 飛びこえても 順に 出す。
+  // 教える 順番（入口 → しりとり → シークレット）を くずさない ため。
+  const word = h.word || pick(THEMES).nm;  // けしきは その場で ひとつ
+  hintsGiven++;
+  try { localStorage.setItem("mamemaru-hint", String(hintsGiven)); } catch(e){}
+  // **ボタンの 名前を 文の 中で くりかえさない。** すぐ下に ある ので ↓ で 足りる。
+  // 長いと 単語の とちゅうで 折り返して 読みにくく なる（じっさい そう なった）。
+  // **段の 名前では なく、いま とどいて いる 称号を 出す。**
+  // はしごは「どこで 出すか」を きめる だけの しくみ。
+  // 33点（しゅぎょうちゅう）の 人に 段の 名前（みならい）で 声を かけると、
+  // すぐ上の 記録表示と 食いちがって 見える（じっさい そう 見えた）。
+  titleHintMsg = "🌸 " + rankOf(top) +
+                 "！ ↓の はこに 「" + word + "」 と いれてみて";
+}
+
 
 /* ============================================================
    DROP_POOL の生成（フェーズ2用）
@@ -4927,7 +5012,7 @@ function generateDropPool(){
 }
 
 function start(){
-  
+  titleHintMsg = "";        // 読んだ ものと して けす（つぎの 称号まで 出ない）
   overlay.classList.add("hidden");
   overlay.classList.remove("result");
   
