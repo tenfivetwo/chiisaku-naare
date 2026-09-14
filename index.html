@@ -834,8 +834,12 @@ function saveRec(){
 const MISSION_DEFS = [
   () => { const n = Math.max(pick([20,23,26,29]), cur + 4);   // いまより ふやす
           return { id:"collect", need:n, prog:0, text:`どうぶつを ${n}にん あつめる` }; },
+  // **キャラの 名前を 直書き しない。** 顔ぶれを えらべる ので 嘘に なる
+  // （じっさい 「ひよこを 11かい みおくる」が ひよこの いない 回で 出て いた）。
+  // つくる／ならべる の おだいは はじめから TIERS を 見て いたのに、
+  // ここだけ もれて いた。いちばん 小さい子＝`TIERS[LAST]`。
   () => { const n = pick([8,11,14]);
-          return { id:"pop", need:n, prog:0, text:`ひよこを ${n}かい みおくる` }; },
+          return { id:"pop", need:n, prog:0, text:`${TIERS[LAST].name}を ${n}かい みおくる` }; },
   // つくる おだいは いちばん大きい子 いがいの ぜんぶを たいしょうに する
   () => { const k = 1 + ((Math.random()*5)|0), n = pick([12,16,20]);
           return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}にん つくる` }; },
@@ -962,7 +966,8 @@ function newBall(tier, x, y, vx, vy){
     sq: 0, sqv: 0,
     phase: rnd(0, Math.PI*2),
     danger: 0,
-    overLine: false      // ラインを こえて おちついて いるか（列ごとの 落下判定に つかう）
+    overLine: false,     // ラインを こえて 0.8びょう おちついて いるか（OVER の カウントダウン用）
+    colOver: false       // ラインを こえて 止まって いるか（列ごとの 落下判定用。age は 見ない）
   };
 }
 
@@ -4151,6 +4156,8 @@ function update(dt){
     if (holdT <= 0){
       shake = Math.max(shake, 3);
       beep(300, .12, "sawtooth", .07);
+      // ねらいが 塞がって いても かならず どこかに 落とす（上の forcedDropX を 見ること）
+      aimX = forcedDropX(held.r, held.tier);
       drop();
     }
   }
@@ -4161,8 +4168,18 @@ function update(dt){
     const sp = Math.hypot(b.vx, b.vy);
     // おちついて つみあがった子だけを かぞえる。
     // とんでいる子・のぼっている子を かぞえると カウントダウンが 誤爆する
+    // **列ごとの 落下判定は `age` を 見ない。** ここが 分かれ目。
+    //   `overLine`（OVER の カウントダウン用）は 0.8びょうの 猶予を もつ。
+    //   とんで いる子・はねた子で **カウントダウンが 誤爆する**のを ふせぐ ため。
+    //   ところが 列の 判定に そのまま つかうと、**着地して 止まって いるのに
+    //   まだ 0.8びょう たって いない子が「いない」ことに なり、
+    //   ちがう子でも 素通りで 落とせて しまう**（実測：見た目で こえて いる列への
+    //   26回中 6回＝23% が すりぬけ。どれも age 0.48〜0.50・速さ1 の 静止中）。
+    //   遊ぶ人には「上に のって いる子」に しか 見えないので、理くつが 通らない。
+    //   止まって いるか どうか（sp / vy）だけで きめる。
+    b.colOver = (b.y - b.r < DANGER && sp < 90 && b.vy > -10);
     if (b.y - b.r < DANGER && b.age > .8 && sp < 90 && b.vy > -10){
-      b.overLine = true;                       // 列ごとの 落下判定は この しるしを 見る
+      b.overLine = true;                       // OVER の カウントダウン用
       b.danger = Math.min(1.6, b.danger + dt*2);
       danger = true;
       if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
@@ -4220,7 +4237,7 @@ function columnBlocked(x, r, tier){
   // よこが かさなる 子の うち、**いちばん 上の子**＝さきに ぶつかる子 を さがす。
   let top = null;
   for (const b of balls){
-    if (!b.overLine || b.merging || b.dead) continue;
+    if (!b.colOver || b.merging || b.dead) continue;
     if (Math.abs(b.x - x) >= b.r + r) continue;     // よこが かさならない ＝ その子は 関係ない
     if (top === null || b.y < top.y) top = b;
   }
@@ -4231,6 +4248,25 @@ function columnBlocked(x, r, tier){
   // 「同じ子を 見つける」という この ゲームの 本筋が そのまま 助けに なる。
   // 下に べつの子が いても 見ない。さきに さわるのは 上の子 だけなので。
   return top.tier !== tier;
+}
+
+/* かんがえじかんが きれた ときの おとしどころ。
+   **時間切れで `drop()` が はやおわりすると、何も 起きない。**
+   `holdT` は マイナスの ままなので **毎フレーム**「ブー」が 鳴って 画面が ゆれ、
+   しかも **塞がった列を ねらい つづければ 時間切れが 効かない**（時間を かせげる）。
+   時間切れは 止まる ことへの 罰なので、**かならず どこかに 落とす**。
+   いちばん 近い あいて いる ところへ ずらす。
+   どこも だめ＝ばんめんが 満杯の ときは、そのまま 落として 決着に まかせる。 */
+function forcedDropX(r, tier){
+  const x0 = clampX(aimX, r);
+  if (!columnBlocked(x0, r, tier)) return x0;
+  for (let d = 8; d <= CW; d += 8){
+    for (const x of [x0 - d, x0 + d]){
+      const xc = clampX(x, r);
+      if (!columnBlocked(xc, r, tier)) return xc;
+    }
+  }
+  return x0;
 }
 
 function drop(){
