@@ -385,6 +385,14 @@
   #charSelectBtn:disabled {
     opacity: .5; cursor: not-allowed; box-shadow: 0 4px 0 #e0c0ca;
   }
+  /* **6体 えらばないと 決定できない ので、やめる 道が 要る。**
+     えらび かけで 閉じても `selectedTiers` は さわらない ので、
+     まえの 顔ぶれ（はじめてなら 既定の 6体）が そのまま のこる。 */
+  #charCancelBtn {
+    display: block; margin: 10px auto 0; background: none; border: 0;
+    color: #b08a9c; font: inherit; font-size: 13px; text-decoration: underline;
+    cursor: pointer; padding: 6px 10px;
+  }
 </style>
 </head>
 <body>
@@ -452,6 +460,7 @@
       <div id="charOrder"></div>
       <div id="charSelectCount">えらんだ数: 0 / 6</div>
       <button class="btn" id="charSelectBtn" disabled>これで はじめる</button>
+      <button class="link" id="charCancelBtn">もどる</button>
     </div>
   </div>
 
@@ -745,8 +754,14 @@ function chainPts(n, spread){
 }
 /* いきのびた じかんの てんすう（10びょうで 1てん）。
    うでまえは「1手の質」ではなく「どれだけ長く もちこたえたか」に 出るので、ここで ひろう。 */
-function timeScore(){ return Math.floor(Math.max(0, elapsed) / 10); }
-function scoreNow(){ return popScore + timeScore() + chainScore + clearScore; }
+/* **じかん点は やめた（2026-09-14）。**
+   みおくり点との そうかんが **ρ=0.92** で、同じ 軸の 言いかえ だった。
+   そのうえ これが「ほぼ放置」の 収入源で、5びょうに1回 散らすだけの 打ち方が
+   229びょう 生きのびて 25点、**そのうち 22点が じかん点**だった。
+   消すと 放置の 見返りは 25点 → 3点に なる。
+   スコアの 説明力は ほとんど 落ちない（R² 84% → 76%）。
+   **`elapsed` 自体は おだい「Nびょう もちこたえる」で つかう ので のこす。** */
+function scoreNow(){ return popScore + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
 // ゆかは どちらのモードでも せりあがる。ちがいは 下から キャラが わくか どうか
@@ -1211,7 +1226,7 @@ sBtn.addEventListener("click", (e) => {
   soundOn = !soundOn;
   sBtn.textContent = soundOn ? "🔊" : "🔇";
 });
-function beep(freq, dur, type, vol){
+function beep(freq, dur, type, vol, slide){
   if (!soundOn) return;
   try {
     if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
@@ -1223,7 +1238,11 @@ function beep(freq, dur, type, vol){
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = type || "sine";
     o.frequency.setValueAtTime(freq, AC.currentTime);
-    o.frequency.exponentialRampToValueAtTime(freq*1.5, AC.currentTime + dur);
+    // **`slide` を 書かないと 完全5度 上に すべる。**
+    // ぜんぶの 音が 上がって いて、**下がる 音が 1つも なかった**。
+    // 「くっつくと 小さく なる」ゲームなのに 芯と 音が 逆を 向いて いた。
+    // 小さく なる ところ（合体）と おわり（ゲームオーバー）は 下げる。
+    o.frequency.exponentialRampToValueAtTime(freq * (slide || 1.5), AC.currentTime + dur);
     g.gain.setValueAtTime(vol || .12, AC.currentTime);
     g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + dur);
     o.connect(g); g.connect(AC.destination);
@@ -1520,7 +1539,16 @@ function doMerge(a, b){
   if (t === LAST){
     // いちばん小さい子どうし → なかよく かけていく
     pops++;
-    popScore += 2;                 // 一番かわいい行為に、ちゃんと てんすうを はらう
+    // **みおくりは 3点（2026-09-14 に 2点から 上げた）。**
+    // じかん点を 消したら ρ(精度,スコア) が 0.31 → **0.23** に 落ちた。
+    // じかん点は「放置の 抜け道」であると 同時に「長く 生きのびた＝上手い」の
+    // 信号でも あった ため。みおくりは **盤面を いちばん 小さい段まで
+    // 落としきらないと 起きない**ので、上手さと 直結して いる。
+    // ここを 3点に したら ρ は **+0.32** に もどった（決着 200/200 のまま）。
+    // 内わけも みおくり61 : れんさ33 : おそうじ6 に なり、
+    // 「いちばん ちいさい子を おおく みおくるほど 高とくてん」という
+    // **看板の 文と 中身が はじめて 一致した**。
+    popScore += 3;
     updateHUD();
     popFx(mx, my);
     bumpMission("pop");
@@ -1540,7 +1568,7 @@ function doMerge(a, b){
   burst(mx, my, col.body, 14, 1);
   ring(mx, my, a.r*2.1, col.shade);
   shake = Math.max(shake, 3);
-  beep(300 + t*95, .12, "sine", .1);
+  beep(300 + t*95, .12, "sine", .1, .8);   // 合体＝小さく なる。音も 下げる（「ぽふっ」）
 }
 
 /* ============================================================
@@ -1659,9 +1687,18 @@ function popFx(x, y){
   // 山の中を はしると、すわっている ひよこに まぎれて 見えなくなる。
   let top = y;
   for (const b of balls) if (!b.dead && b.y - b.r < top) top = b.y - b.r;
-  const lane = Math.max(DANGER + 22, Math.min(y - 26, top - 30));
+  // **合体した ところから 80px より 上には 行かせない。**
+  // もとは 山の てっぺん（top-30）に そろえて いたので、どこか1匹でも
+  // 高い ところに いると **天井に はりついて 250px 舞い上がってから 走って いた**。
+  // 設計判断3 で「昇天に 見える」として 却下した 形が ここで 復活して いた。
+  // 連続コマで 確認：2匹は 上端の「ここまで！」線の 上を 通り、
+  // 「+2」と すなぼこりは 300px 下に 置き去りに なって いた。
+  const laneRaw = Math.max(DANGER + 22, Math.min(y - 26, top - 30));
+  const lane = Math.max(laneRaw, y - 80);
   for (let i = 0; i < 2; i++){
-    fx.push({ t:"run", x: x - dir*i*46, y, y0: y, lane,
+    // **46px では 2匹が 43% かさなって「双頭の かたまり」に 見えて いた。**
+    // 見かけの 直径は r22 × 2 × 1.85 ＝ 81px。それより ひろく とる。
+    fx.push({ t:"run", x: x - dir*i*88, y, y0: y, lane,
               vx: dir*(255 - i*18), s: 1.85 - i*0.06,
               ph: i*1.15, dir, life: 1.15, age:0, puff: 0 });
   }
@@ -1669,7 +1706,7 @@ function popFx(x, y){
     fx.push({ t:"h", x: x + rnd(-20,20), y: y + rnd(-10,6), vy: rnd(-42,-18), life:.8, age:0 });
 
   // もらった てんすうを その場に 出す（40%を かせぐ行為が 無言だった）
-  fx.push({ t:"txt", x, y: y - 26, s:"+2", life: .85, age:0, vy: -34 });
+  fx.push({ t:"txt", x, y: y - 26, s:"+3", life: .85, age:0, vy: -34 });
 
   if (!light){
     ring(x, y, 100, "#FFE889");
@@ -4309,7 +4346,7 @@ function gameOver(byUser){
     // のこぎり波の 下降（ブブー）は、絵と 文言で ていねいに やわらげた 負けを
     // 音だけで ひっくり返していた。まるい音の やさしい ためいきに する。
     [523, 466, 392].forEach((f, i) =>
-      setTimeout(() => beep(f, .26, "sine", .075), i*150));
+      setTimeout(() => beep(f, .26, "sine", .075, .85), i*150));   // ためいきは 下がる
   }
   const sc = scoreNow();
   // にじいろの 回は 記録に 残さない（上の SHIRITORI の 説明を 見ること）。
@@ -4328,7 +4365,13 @@ function gameOver(byUser){
   if (isRec) setTimeout(() => { [784,988,1175,1568].forEach((f,i) =>
     setTimeout(() => beep(f, .2, "triangle", .12), i*90)); }, 420);
 
-  const next = nextGoal(sc);
+  // **称号は その回の 点数では なく いままでの さいこうで 出す。**
+  //  `rankOf(sc)` だと、さいこう60点の人が 0点で 終えた とき
+  //  「まめまる はじめました／つぎの目標：15点」と **降格の 表示**に なって いた。
+  //  ヒント側は 生涯ベストを 見て いた ので 基準も 食いちがって いた。
+  //  その回の 出来は 見出しと 点数と 内わけが 伝える。称号は 身分。
+  const topBest = Math.max(bestEver, bestFreeEver);
+  const next = nextGoal(topBest);
   const modeName = spawnRows ? "まめまる ふえる" : "まめまる ふえない";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
@@ -4337,8 +4380,8 @@ function gameOver(byUser){
       <h1>${rainbowRun ? "にじいろ おつかれさま！ 🌈"
             : isRec ? "あたらしい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
       <div class="big">${sc} <span style="font-size:16px">点</span></div>
-      <p class="calc">みおくり ${popScore} ＋ じかん ${timeScore()} ＋ れんさ ${chainScore} ＋ おそうじ ${clearScore}</p>
-      <p class="rank">${rankOf(sc)}</p>
+      <p class="calc">みおくり ${popScore} ＋ れんさ ${chainScore} ＋ おそうじ ${clearScore}</p>
+      <p class="rank">${rankOf(topBest)}</p>
       <p>つぎの目標：${next}</p>
       <p class="ms-got">⭐ おだい ${stamps} こ たっせい</p>
       <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
@@ -4815,6 +4858,13 @@ function initCharSelect(){
     hideCharSelect();
   };
 
+  const cancelBtn = document.getElementById("charCancelBtn");
+  if (cancelBtn) cancelBtn.onclick = () => {
+    // **なにも 保存しない。** `selectedTiers` を さわらないので
+    // まえの 顔ぶれが そのまま のこる（`hideCharSelect` が それを 描きなおす）。
+    hideCharSelect();
+  };
+
   paintCount();
 }
 
@@ -4913,15 +4963,22 @@ function bindTitleButtons(){
       const b = bestRef();
       rec.innerHTML = b > 0
         ? `さいこう ${b}点 ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}かいめ</span>`
-        : `<span>まずは 20点 を めざそう</span>`;
+        : `<span>まずは ${RANK_STEPS[0]}点 を めざそう</span>`;
     }
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
     if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
-    if (titleHintMsg){                            // タイトルは 作りなおされる ので 毎回
-      const hm = document.getElementById("hintMsg");
-      if (hm){ hm.textContent = titleHintMsg; hm.classList.remove("hidden"); }
+    // まだ 出して いない ヒントが あれば、ここで はじめて「出した」ことに する
+    const hm = document.getElementById("hintMsg");
+    if (pendingHint && hm){
+      titleHintMsg = pendingHint;
+      pendingHint = null;
+      hintsGiven++;
+      try { localStorage.setItem("mamemaru-hint", String(hintsGiven)); } catch(e){}
+    }
+    if (titleHintMsg && hm){                      // タイトルは 作りなおされる ので 毎回
+      hm.textContent = titleHintMsg; hm.classList.remove("hidden");
     }
     updateHUD();
   };
@@ -4957,11 +5014,16 @@ function showTitle(){
 }
 
 /* 称号と つぎの目標 */
-const RANK_STEPS = [15, 25, 35, 50, 70, 95, 125, 160, 200, 250, 310];
-const RANK_TITLES = { 15:"まめまる みならい", 25:"まめまる しゅぎょうちゅう", 35:"まめまる つかい",
-                      50:"まめまる じょうず", 70:"まめまる たつじん", 95:"まめまる せんせい",
-                      125:"まめまる はかせ", 160:"まめまる マスター", 200:"まめまる おう",
-                      250:"でんせつの まめまる", 310:"まめまる かみさま" };
+/* **じかん点を 消した ぶん、はしごを 引きなおした（2026-09-14）。**
+   200ゲームの 到達率：10点 82% ／ 40点 48% ／ 75点 19% ／ 100点 8% ／ 130点 3%。
+   上の2段は 測定AIでは 届かない が、それで よい（AIは 下ばり。
+   いちばん 上は でんせつで ある べき）。**前は 上4段が 届かなかった**ので
+   むしろ 良く なって いる。 */
+const RANK_STEPS = [10, 18, 28, 40, 55, 75, 100, 130, 165, 210, 270];
+const RANK_TITLES = { 10:"まめまる みならい", 18:"まめまる しゅぎょうちゅう", 28:"まめまる つかい",
+                      40:"まめまる じょうず", 55:"まめまる たつじん", 75:"まめまる せんせい",
+                      100:"まめまる はかせ", 130:"まめまる マスター", 165:"まめまる おう",
+                      210:"でんせつの まめまる", 270:"まめまる かみさま" };
 function rankOf(n){
   let got = null;
   for (const s of RANK_STEPS) if (n >= s) got = s;
@@ -4991,10 +5053,13 @@ function nextGoal(n){
    「この言葉を 入れてね」と 書いて 入力させるのは、キャラを 直接
    あげる ことの 回りくどい版 でしかない。秘密が 作業に なる。
    出すのは **答えでは なく 入口**。 */
+/* しきい値は **かならず `RANK_STEPS` の どれかに そろえる**。
+   称号と 同時に 出る ことで「これは ごほうびだ」と 読める。
+   到達率：10点 82% ／ 40点 48% ／ 75点 19%。 */
 const RANK_HINTS = [
-  { at: 15, word: null },            // null＝けしきの名前を その場で ひとつ 選ぶ
-  { at: 50, word: "ひみつ" },         // → しりとりへ
-  { at: 95, word: "しーくれっと" },   // → シークレット3体へ
+  { at: 10, word: null },            // null＝けしきの名前を その場で ひとつ 選ぶ
+  { at: 40, word: "ひみつ" },         // → しりとりへ
+  { at: 75, word: "しーくれっと" },   // → シークレット3体へ
 ];
 let hintsGiven = 0;
 try { hintsGiven = Math.max(0, Math.min(RANK_HINTS.length,
@@ -5004,6 +5069,16 @@ try { hintsGiven = Math.max(0, Math.min(RANK_HINTS.length,
    1回 書いて おわりに せず、paint() から 毎回 書きなおす。
    けす のは start()（つぎの ゲームが 始まる とき）。 */
 let titleHintMsg = "";
+
+/* **まだ 画面に 出して いない ヒント。**
+   ここを つくった とき `checkRankHint()` の 中で すぐ 数を 進めて いたが、
+   文言は タイトルにしか 出ない のに、結果画面の 主ボタンは「もういちど」で、
+   押すと `start()` が 文言を 消して いた。
+   実測：18点で 終えて `mamemaru-hint` は 0→1 に 進み、**表示 0回**。
+   「おわる」で もどっても 出ない ＝ **最初の ヒントは 永久に 失われて いた**。
+   ヒントは 3回きりで、隠し要素 3つ ぜんぶの 入口が ここに ぶら下がって いる。
+   **数を 進めるのは「じっさいに 画面に 出した とき」だけ。** */
+let pendingHint = null;
 
 function checkRankHint(){
   if (hintsGiven >= RANK_HINTS.length) return;
@@ -5016,16 +5091,15 @@ function checkRankHint(){
   // **いちどに 1つだけ。** 大きく 飛びこえても 順に 出す。
   // 教える 順番（入口 → しりとり → シークレット）を くずさない ため。
   const word = h.word || pick(THEMES).nm;  // けしきは その場で ひとつ
-  hintsGiven++;
-  try { localStorage.setItem("mamemaru-hint", String(hintsGiven)); } catch(e){}
+  // **ここでは まだ 進めない。**（上の pendingHint の 説明を 見ること）
   // **ボタンの 名前を 文の 中で くりかえさない。** すぐ下に ある ので ↓ で 足りる。
   // 長いと 単語の とちゅうで 折り返して 読みにくく なる（じっさい そう なった）。
   // **段の 名前では なく、いま とどいて いる 称号を 出す。**
   // はしごは「どこで 出すか」を きめる だけの しくみ。
   // 33点（しゅぎょうちゅう）の 人に 段の 名前（みならい）で 声を かけると、
   // すぐ上の 記録表示と 食いちがって 見える（じっさい そう 見えた）。
-  titleHintMsg = "🌸 " + rankOf(top) +
-                 "！ ↓の はこに 「" + word + "」 と いれてみて";
+  pendingHint = "🌸 " + rankOf(top) +
+                "！ ↓の はこに 「" + word + "」 と いれてみて";
 }
 
 
@@ -5048,7 +5122,9 @@ function generateDropPool(){
 }
 
 function start(){
-  titleHintMsg = "";        // 読んだ ものと して けす（つぎの 称号まで 出ない）
+  // 出しおわった 文だけ けす。**`pendingHint` は さわらない**
+  //（まだ 見せて いない ヒントは、つぎに タイトルへ 来た ときに 出す）
+  titleHintMsg = "";
   overlay.classList.add("hidden");
   overlay.classList.remove("result");
   
