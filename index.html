@@ -127,9 +127,13 @@
   }
   button.btn.sub:active { box-shadow: 0 1px 0 #d9c3cd; }
   button.btn.tiny { font-size: 11px; padding: 7px 16px; box-shadow: 0 3px 0 #d9c3cd; }
+  /* **配慮の 設定そのものが いちばん 押しにくく いちばん 読めない**のは 本末転倒。
+     もとは 11px・高さ23px・コントラスト 2.56:1 で、44px にも 4.5:1 にも 届いて いなかった。
+     `user-scalable=no` で 拡大も できないので、ここで 足りて いる ひつようが ある。 */
   button.link {
     background: none; border: none; font-family: inherit;
-    font-size: 11px; color: #b79aa8; text-decoration: underline; cursor: pointer; padding: 4px;
+    font-size: 13px; color: #8b7285; text-decoration: underline; cursor: pointer;
+    padding: 11px 10px; min-height: 44px; line-height: 1.4;
   }
   #overlay .lead { font-size: 15px; line-height: 1.9; }
   #titleCv { width: 100%; max-width: 282px; height: auto; display: block; margin: -2px 0 -4px; }
@@ -446,6 +450,7 @@
       <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
       <button class="link" id="editCharBtn">まめまるを えらびなおす</button>
       <p class="pickHint hidden" id="pickHint">すきな まめまる を 6つ えらべるよ ✨</p>
+      <button class="link" id="slowBtn">かんがえじかん：ふつう</button>
       <button class="link" id="calmBtn">えんしゅつを よわめる</button>
     </div>
   </div>
@@ -768,6 +773,12 @@ let bctx = null;                     // 下の 図鑑バー（タイトル画面
 let spawnRows = false;
 try { spawnRows = localStorage.getItem("mamemaru-spawn") === "1"; } catch(e){}
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
+/* **「この列には おとせない」を 絵で 出す。**
+   もとは `beep(330, 音量.05)` だけで、**画面は 1ピクセルも 変わらなかった**。
+   音を 切って いる人には「指を はなしたのに 何も 起きない」＝ 故障に 見える。
+   スマホの ゲームは 無音で 遊ぶ人の ほうが 多い。
+   `noDropT` が のこって いる あいだ、その列を くもらせ、もっている子を よこに ゆらす。 */
+let noDropT = 0, noDropX = 0, noDropR = 0;
 const RISE_GLOW_T = 0.9;
 const OVER_GRACE = 3;                // ラインを こえてからの ゆうよ（びょう）
 let overCount = OVER_GRACE, safeT = 0, tickSec = -1;
@@ -811,10 +822,18 @@ let levelAdj = 0, lvBackCool = 0, lvBackLeft = LV_BACK_MAX;
 function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_SEC)); }
 function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8); }
 function dropDelay(){ return Math.max(.17, .44 - (level-1) * .035); }
-const HOLD_LIMIT = 5.0;              // かんがえじかん（ずっと このまま）
+/* かんがえじかん。**「ゆっくり」を えらべる。**
+   5.0びょう 固定では 4歳児・70代・手が ふるえる 人には
+   「どの子か 見る → おなじ子を さがす → ねらう」に 足りない。
+   記録は 分けなくて よい：ゆかは 時計で 上がるので、
+   **長く 考えるほど 置ける 数が へって 点は むしろ 下がる**（実測で 確かめる）。 */
+let slowMode = false;
+try { slowMode = localStorage.getItem("mamemaru-slow") === "1"; } catch(e){}
+const HOLD_LIMIT = 5.0;
 function holdLimit(){
   // はじめの 25びょうは ゆっくり かんがえられる（初見の 事故を へらす）
-  return elapsed < 25 ? HOLD_LIMIT + 2.5 : (elapsed < 50 ? HOLD_LIMIT + 1.2 : HOLD_LIMIT);
+  const base = slowMode ? HOLD_LIMIT * 3 : HOLD_LIMIT;       // ゆっくり＝15びょう
+  return elapsed < 25 ? base + 2.5 : (elapsed < 50 ? base + 1.2 : base);
 }
 function gravityAt(){ return 2300 + (level-1) * 120; }
 
@@ -1223,10 +1242,18 @@ function updateHUD(){
    おと
    ============================================================ */
 let AC = null, soundOn = true;
+// **おとの ON/OFF は おぼえる。** おぼえないと 起動の たびに 音が 出る 状態に もどり、
+// 電車でも 寝かしつけでも 毎回 鳴る。無音で 遊ぶ人は 少なく ない。
+try { soundOn = localStorage.getItem("mamemaru-sound") !== "0"; } catch(e){}
 const sBtn = document.getElementById("sound");
+// **おぼえた 値を ボタンの 見た目にも 反映する。**
+// 中身（`soundOn`）だけ 直して 絵文字を そのままに して いた ため、
+// 読みこんだ あと **「🔊 なのに 鳴らない」** に なって いた（実測）。
+sBtn.textContent = soundOn ? "🔊" : "🔇";
 sBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   soundOn = !soundOn;
+  try { localStorage.setItem("mamemaru-sound", soundOn ? "1" : "0"); } catch(e){}
   sBtn.textContent = soundOn ? "🔊" : "🔇";
 });
 function beep(freq, dur, type, vol, slide){
@@ -1718,11 +1745,15 @@ function popFx(x, y){
     for (const b of balls)
       makeShock(b, Math.min(.4, Math.hypot(b.x - x, b.y - y) / 950), rnd(.6, .9), 1);
     if (held) makeShock(held, .1, .7, 1);
-    // げんきな かけ声
-    beep(784, .08, "square", .1);
-    setTimeout(() => beep(1046, .08, "square", .09), 55);
-    setTimeout(() => beep(1568, .16, "triangle", .1), 110);
-    setTimeout(() => beep(2093, .18, "sine", .06), 190);
+    // **「ばいばーい」の かけ声。上がる音では ない。**
+    // もとは 784→1046→1568→2093 の 上昇で、各音が さらに 完全5度 上へ すべり
+    // 最後は 約3140Hz まで 昇って いた。**よこに 走って いく子に、真上へ 昇る音**が
+    // ついて いた ── 絵では「昇天に 見える」として 却下した 動きが、音に のこって いた。
+    // いまは さがって から すこし 持ちあがる（手を ふる かたち）。`slide` 1.0 で すべらせない。
+    beep(1568, .09, "square", .10, 1.0);
+    setTimeout(() => beep(1318, .09, "square", .09, 1.0), 60);
+    setTimeout(() => beep(1046, .17, "triangle", .10, 1.0), 120);
+    setTimeout(() => beep(1568, .20, "sine", .07, 1.0), 210);
   } else {
     beep(1046, .07, "triangle", .07);
     setTimeout(() => beep(1568, .09, "sine", .05), 60);
@@ -3568,6 +3599,32 @@ function draw(){
 
   // もっている子
   if (state === "play" && held){
+    // **おとせない 列は ここで くもらせる。**
+    // さいしょ 点線ガイドと 同じ ブロック（もっと 前の レイヤー）に 書いて いて、
+    // **カゴに 上から 塗りつぶされて 1度も 見えて いなかった**。
+    // もって いる子と 同じ レイヤーに 置くこと。
+    if (noDropT > 0){
+      // **下じきと 同系色に しない こと。** さいしょ 紫がかった 灰 `#6E5568` に して、
+      // よぞら・ほしぞら（紫の 空）で **ほとんど 見えなかった**。
+      // かざりの 色・カゴの 色と まったく 同じ 失敗。
+      // 赤は 明るい カゴ（クリーム）でも 暗い 空でも 色あいが ちがうので 両方で 読める。
+      ctx.save();
+      const a = Math.min(1, noDropT / .45);
+      ctx.globalAlpha = a * .26;
+      ctx.fillStyle = "#D9436E";
+      const bx = noDropX - noDropR - 6, bw = (noDropR + 6) * 2;
+      ctx.fillRect(bx, DANGER - 10, bw, floorY - DANGER + 10);
+      // ふちも 引く。ぬりだけだと うすい 画面で 消える
+      ctx.globalAlpha = a * .70;
+      ctx.strokeStyle = "#D9436E"; ctx.lineWidth = 2.5;
+      ctx.setLineDash([7, 5]);
+      ctx.strokeRect(bx + 1.25, DANGER - 9, bw - 2.5, floorY - DANGER + 8);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // おとせなかった ときは よこに ぷるぷる させる（だんだん おさまる）
+    const nx = noDropT > 0 ? Math.sin(noDropT*58) * noDropT * 13 : 0;
     const hy = held.y + Math.sin(time*4)*2.5;
     // のこりじかんリング
     const fr = Math.max(0, Math.min(1, holdT / holdSpan));
@@ -3575,19 +3632,19 @@ function draw(){
     ctx.save();
     ctx.lineCap = "round";
     ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.arc(held.x, hy, rr, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(held.x + nx, hy, rr, 0, 7); ctx.stroke();
     const hot = holdT < 1.6;
     ctx.strokeStyle = hot
       ? `rgba(255,80,110,${.6+.4*Math.sin(time*16)})`
       : (holdT < 3 ? "#ffb14d" : "#7fd6f5");
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(held.x, hy, rr, -Math.PI/2, -Math.PI/2 + Math.PI*2*fr);
+    ctx.arc(held.x + nx, hy, rr, -Math.PI/2, -Math.PI/2 + Math.PI*2*fr);
     ctx.stroke();
     ctx.restore();
 
     ctx.save();
-    ctx.translate(held.x, hy);
+    ctx.translate(held.x + nx, hy);
     if (hot){ const k = 1 + .04*Math.sin(time*22); ctx.scale(k, 2-k); }
     drawCreature(ctx, held.tier, held.r, held.phase + time*.6, blinkAmt(held), 0, smileAmt(held), surpAmt(held), held.surpKind);
     ctx.restore();
@@ -4315,7 +4372,8 @@ function drop(){
   // おとそうと して いる 列が つまって いたら おとさない（ほかの 列は おとせる）
   const dropX = clampX(aimX, held.r);
   if (columnBlocked(dropX, held.r, held.tier)){
-    beep(330, .15, "sine", .05);      // 「ここには おとせない」の あいず
+    beep(330, .15, "sine", .05);      // 「ここには おとせない」の あいず（音）
+    noDropT = .45; noDropX = dropX; noDropR = held.r;   // 　〃　（絵）
     return;
   }
 
@@ -4972,6 +5030,8 @@ function bindTitleButtons(){
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
     if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
+    const slow = document.getElementById("slowBtn");
+    if (slow) slow.textContent = "かんがえじかん：" + (slowMode ? "ゆっくり" : "ふつう");
     // まだ 出して いない ヒントが あれば、ここで はじめて「出した」ことに する
     const hm = document.getElementById("hintMsg");
     if (pendingHint && hm){
@@ -4986,6 +5046,13 @@ function bindTitleButtons(){
     updateHUD();
   };
   titlePaint = paint;      // よみこみ などからも よべる ように しておく
+  const slowB = document.getElementById("slowBtn");
+  if (slowB) slowB.addEventListener("click", () => {
+    slowMode = !slowMode;
+    try { localStorage.setItem("mamemaru-slow", slowMode ? "1" : "0"); } catch(e){}
+    paint();
+    beep(slowMode ? 520 : 620, .07, "sine", .06);
+  });
   if (calm) calm.addEventListener("click", () => {
     calmFx = !calmFx;
     try { localStorage.setItem("mamemaru-calm", calmFx ? "1" : "0"); } catch(e){}
@@ -5172,6 +5239,10 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden){
     try { saveRec(); } catch(e){}
   } else {
+    // **もどって きた しゅんかんに 時間を 進めない。**
+    // `last` が 古いままだと dt が どかっと 入る。電話に 出て もどったら
+    // 死んで いた、を ふせぐ。`dt > 0.05` の 上限とは べつに ここでも 止める。
+    last = performance.now();
     if (AC && AC.state === "suspended"){ try { AC.resume(); } catch(e){} }
   }
 });
@@ -5229,7 +5300,13 @@ cv.addEventListener("pointerdown", e => {
 cv.addEventListener("pointerup", e => {
   aimX = pointerX(e);
   const up = (downY == null) ? 0 : (downY - pointerY(e));
-  const outOfBox = pointerY(e) < DANGER * 0.55;      // カゴより 上で はなした
+  // **もって いる子 そのものを タップしたら おちる こと。**
+  // `DANGER * 0.55`（＝83.6）で 切って いた ため、もって いる子の 中心（y=78）を
+  // タップすると「カゴより 上」と 見なされて **無反応**だった。
+  // 幼児が いちばん ねらう ところが 死角に なって いた（実測：y=40/78/83 で おちない）。
+  // いまは **もって いる子の 頭より 上**だけを 取り消しに する。
+  const topOfHeld = HOLD_Y - (held ? held.r : 30) - 12;
+  const outOfBox = pointerY(e) < topOfHeld;
   downY = null; downId = null;
   if (up > CANCEL_UP || outOfBox){
     if (state === "play" && held) beep(420, .07, "sine", .05);   // とりけしの あいず
@@ -5466,7 +5543,9 @@ function loop(now){
   let dt = (now - last)/1000;
   last = now;
   if (dt > 0.05) dt = 0.05;
-  update(dt);
+  if (noDropT > 0) noDropT = Math.max(0, noDropT - dt);
+  // かくれて いる あいだは 時間を 進めない（ブラウザが rAF を 止めない 場合の 保険）
+  if (!document.hidden) update(dt);
   draw();
   requestAnimationFrame(loop);
 }
