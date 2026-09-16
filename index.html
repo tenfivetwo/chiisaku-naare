@@ -4636,7 +4636,13 @@ function rollTitleCast(){
    dt を かぞえると ずれる。
    ============================================================ */
 const PET_GOAL = 7, HOP_SEC = .42;
+/* **「のべ7回」は ほんとうに のべ。** 変数だけで もって いた ころは
+   ページを 読みなおすと 0に もどって いた。4回つついて 閉じ、
+   つぎの日に 3回 つついても 一生 とどかない。
+   下の「跳ねる子が ふえて いく」しかけも、もどされると 意味を なくす。 */
 let petCount = 0;
+try { petCount = Math.max(0, Math.min(PET_GOAL,
+        parseInt(localStorage.getItem("mamemaru-pet") || "0", 10) || 0)); } catch(e){}
 function hopOne(c){ if (c) c.hop0 = time; }
 function hopAll(stagger){
   (TITLE_CAST || []).forEach((c, i) => { c.hop0 = time + (stagger ? i*.07 : 0); });
@@ -4658,6 +4664,23 @@ function petAt(px, py){
   beep(560 + ((Math.random()*4)|0)*90, .07, "sine", .06);
   if (starUnlocked) return;             // もう 出して あるなら かぞえない
   petCount++;
+  try { localStorage.setItem("mamemaru-pet", String(petCount)); } catch(e){}
+
+  /* **4回目から 跳ねる子が ふえて いく。**
+     6回目までは 画面に 何も 出て いなかった ので、ぐうぜん 2〜3回 つついた人は
+     そこで 止まって いた。**数字は 出さない**：「あと2かい」と 書くと
+     秘密が 作業表に なる（`しーくれっと` で 3語だけ ならべたのと 同じ りくつ）。
+     かわりに **手ごたえが 広がって いく**ことで「何か たまって いる」と 伝える。
+     つついた子から よこへ 順に 伝わるので、**ぜんいん 同時に 跳ぶ 7回目**
+     （`hopAll`）とは はっきり 別の 見え方に なる。 */
+  const spread = petCount - 3;                       // 4回目 → 1匹、5回目 → 2匹…
+  if (spread > 0 && petCount < PET_GOAL){
+    const near = (TITLE_CAST || [])
+      .filter(c => c !== hit)
+      .sort((a, b) => Math.abs(a.x - hit.x) - Math.abs(b.x - hit.x))
+      .slice(0, spread);
+    near.forEach((c, i) => { c.hop0 = time + (i + 1) * .09; });   // さざ波に する
+  }
   if (petCount >= PET_GOAL){
     starUnlocked = true;
     try { localStorage.setItem("mamemaru-star", "1"); } catch(e){}
