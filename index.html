@@ -398,7 +398,7 @@
 <body>
 <div id="wrap">
   <div id="hud">
-    <div class="card"><div class="lbl">みおくり</div><div class="val" id="cur">0</div>
+    <div class="card"><div class="lbl">みおくった</div><div class="val" id="cur">0</div>
       <div class="sub" id="curSub">いま 0にん</div></div>
     <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div>
       <div class="sub" id="best">さいこう 0</div></div>
@@ -1209,7 +1209,10 @@ function updateRiseBar(){
 }
 
 function updateHUD(){
-  elCur.textContent = pops;                        // 見送った ひよこの 組数（＝てんすうの 中心）
+  // **ラベルは「みおくった」。ここは かいすう（組数）で、点数では ない。**
+  // 結果画面の「みおくり NN」は 点数（＝かいすう × 3）なので、
+  // どちらも「みおくり」だと **同じ ことばで ちがう 数字**に 見えて まぎれる。
+  elCur.textContent = pops;
   if (elCurSub) elCurSub.textContent = "いま " + cur + "にん";
   elScore.textContent = scoreNow();
   elBest.textContent = "さいこう " + Math.max(best, bestRef());
