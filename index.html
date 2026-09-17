@@ -71,11 +71,26 @@
   #overlay {
     position: fixed; inset: 0; z-index: 15; border-radius: 0;
     background: rgba(255,250,252,.88);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     gap: 8px; text-align: center; backdrop-filter: blur(2px);
     padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
     overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
+  /* **`justify-content: center` を たてに 戻さない こと。**
+     中身が 画面より たかい とき、center は **はみ出しを 上下に 折半する**ので
+     上が 画面の そとに 出る。しかも `scrollTop` の 下限は 0 なので
+     **スクロールしても 上へ 戻せない**。実測（2026-09-17）：
+     375×600 で h1 の 上端が −47px、320×568 で −57px ──
+     つまり iPhone SE では **「まめまる」という 名前が 一度も 画面に 出て いなかった**。
+     かわりに いちばん上と いちばん下の 子に `margin: auto` を あてる。
+     すきまが ある ときは 2つの auto が 等分して **まんなかに そろい**、
+     足りない ときは auto が 0 に つぶれて **上ぞろえ＋ぜんぶ スクロールできる**に なる。
+     （auto マージンは `justify-content` より 先に すきまを 取るので 両立する）
+     **`.result` は のぞく。** あちらは 子が 1つ（.panel）だけ なので、
+     first と last が 同じ 要素に なって 上下 auto ＝ まんなか に なり、
+     `justify-content: flex-end` の 下ぞろえが こわれる。 */
+  #overlay:not(.result) > :first-child { margin-top: auto; }
+  #overlay:not(.result) > :last-child  { margin-bottom: auto; }
   #overlay.hidden { display: none; }
   .hidden { display: none !important; }
   /* けっか画面は うすく：うしろの ばんめんが よく見えるように */
@@ -236,6 +251,11 @@
     margin-right: 2px; white-space: nowrap; }
   #overlay .dex i { display: block; width: 14px; height: 14px; border-radius: 4px; }
   #overlay .dex i.no { background: none; border: 1px dashed #dcc4cf; }
+  #overlay .dex .lb.nw { color: #d9a23c; font-weight: 700; font-size: 10.5px; }
+  /* けっか画面は もともと いちばん 混む ところ。**あたらしい けしきの 回だけ** 出る
+     ので 常設では ないが、それでも ひとまわり 小さく して 点数を うずめない。 */
+  #overlay.result .dex { margin: -2px 0 -1px; gap: 3px; }
+  #overlay.result .dex i { width: 11px; height: 11px; border-radius: 3px; }
   @media (max-height: 700px){
     #overlay .dex i { width: 11px; height: 11px; border-radius: 3px; }
     #overlay .dex .lb { font-size: 9px; }
@@ -464,8 +484,13 @@
         上のラインを越えないように！
       </p>
       <div id="modes">
-        <button class="mode" data-m="0">まめまる 増えない</button>
+        <!-- **既定（まめまる 増える）を ひだりに 置く。** えらばれて いる ほうが
+             右に あると、はじめての 人には 「左が 既定」の 見なれた かたちと
+             ずれて 見える。`data-m` は 入れかえない こと ── `1` が 増える、
+             `0` が 増えない で、`mamemaru-spawn` に そのまま 入る。
+             ならび順だけを 変える。 -->
         <button class="mode" data-m="1">まめまる 増える</button>
+        <button class="mode" data-m="0">まめまる 増えない</button>
       </div>
       <p class="modeinfo" id="modeInfo"></p>
       <p class="howto">指で横に動かす → 離すと落ちる</p>
@@ -3377,8 +3402,14 @@ try { seenThemes  = JSON.parse(localStorage.getItem("mamemaru-themes") || "[]");
 try { playedChars = JSON.parse(localStorage.getItem("mamemaru-chars")  || "[]"); } catch(e){}
 if (!Array.isArray(seenThemes))  seenThemes  = [];
 if (!Array.isArray(playedChars)) playedChars = [];
+/* **その回の けしきが はじめてだったか。** けっか画面で 1行 出す ために つかう。
+   図鑑を タイトルにしか 置かなかった ため、**「もう一度」を 押しつづける 人には
+   一生 見えて いなかった**（実測：もう一度 だけで 9ゲーム まわして 表示 0回）。
+   称号ヒントで ふんだ「**遊ぶ人が 押すほうの ボタンで 試すこと**」の 再発。 */
+let newThemeRun = false;
 function markSeen(){
   try {
+    newThemeRun = !!(TH && TH.nm && !seenThemes.includes(TH.nm));
     if (TH && TH.nm && !seenThemes.includes(TH.nm)) seenThemes.push(TH.nm);
     for (const c of (selectedTiers || []))
       if (c && c.name && !playedChars.includes(c.name)) playedChars.push(c.name);
@@ -4261,10 +4292,12 @@ function drawHeart(g, x, y, s){
    正しい（つぎは 見たい、に なる）。空の 行列を でっちあげない こと。
    **音は 出さない。** 決着の 音と かさなる。
    **走るのは よこ。** 上へ 浮かせない（設計判断3）。 */
-let paradeN = 0, paradeI = 0, paradeT = 0;
+let paradeN = 0, paradeI = 0, paradeT = 0, paradeDir = 1;
+const PARADE_GAP = 88;               // ひと組 2ひきの あいだ。popFx と 同じ 値
 function startParade(){
   paradeN = Math.min(pops * 2, 8);     // 1かいの 見送りで 2ひき。多すぎても 8ひきで 止める
   paradeI = 0; paradeT = .9;           // 決着の 音が 鳴りおわってから
+  paradeDir = 1;
 }
 function stopParade(){ paradeN = 0; paradeI = 0; }
 function stepParade(dt){
@@ -4272,19 +4305,30 @@ function stepParade(dt){
   if (paradeN <= 0 || state !== "over") return;
   paradeT -= dt;
   if (paradeT > 0) return;
-  if (paradeI >= paradeN){ paradeI = 0; paradeT = 2.6; return; }   // ひとめぐり したら 間を おいて また
+  if (paradeI >= paradeN){                    // ひとめぐり したら 間を おいて 反対がわから また
+    paradeI = 0; paradeDir = -paradeDir; paradeT = 2.6; return;
+  }
   // **山の 上を 走らせる。** けっか画面の 盤面は 定義上 いっぱいなので、
   // 高さを 決めうちに すると 積みあがった子に まぎれて 見えなく なる（popFx と 同じ りくつ）。
   let top = CH;
   for (const b of balls) if (!b.dead && b.y - b.r < top) top = b.y - b.r;
   const lane = Math.max(64, Math.min(DANGER + 30, top - 34));      // 64 より 上には 行かせない（見切れる）
-  const dir = (paradeI % 2 === 0) ? 1 : -1;
+  const dir = paradeDir;
   const sp = 205;
-  fx.push({ t:"run", x: dir > 0 ? -44 : CW + 44, y: lane, y0: lane, lane,
-            vx: dir * sp, s: 1.5, ph: paradeI * .9, dir,
-            life: (CW + 110) / sp, age: 0, puff: 0 });
-  paradeI++;
-  paradeT = .42;
+  const x0 = dir > 0 ? -44 : CW + 44;
+  // **2ひきを ひと組で、同じ むきに 出す。**
+  // 1ぴきずつ むきを 反転させて いた ころは、見送り1回（＝2ひき）の 回で
+  // **左の子は 左へ、右の子は 右へ 走って 画面の まんなかで すれちがって いた**。
+  // 設計判断3 は「**なかよく** よこに 走って 去る」で、読まれ方まで 決めて ある ところ。
+  // いちばん 守るべき 絵が、けっか画面の 行列の 中で こわれて いた（2026-09-17 に 発見）。
+  // むきを 変えるのは **ひとめぐりごと**。ひと組の 中では 変えない こと。
+  for (let k = 0; k < 2 && paradeI < paradeN; k++, paradeI++){
+    const back = k * PARADE_GAP;                       // うしろの子は そのぶん 手前から
+    fx.push({ t:"run", x: x0 - dir*back, y: lane, y0: lane, lane,
+              vx: dir * sp, s: 1.5 - k*.05, ph: k * 1.15, dir,
+              life: (CW + 110 + back) / sp, age: 0, puff: 0 });
+  }
+  paradeT = 1.0;                              // つぎの 組まで。組と 組は はっきり あける
 }
 
 function update(dt){
@@ -4614,6 +4658,7 @@ function gameOver(byUser){
       <p>次の目標：${next}</p>
       <p class="ms-got">⭐ お題 ${stamps}個 達成</p>
       ${nm ? `<p class="ms-left">あと ${nm.left} ／ お題は 次のゲームに続きます</p>` : ""}
+      ${newThemeRun ? '<div class="dex" id="resultDex"></div>' : ""}
       <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
         rainbowRun ? " ／ 🌈 にじいろ（記録には残りません）" : ""}</p>
       <div class="btnrow">
@@ -4622,6 +4667,7 @@ function gameOver(byUser){
       </div>
       ${isRec ? '<button class="link" id="saveNow">記録を保存（メモに貼っておくと安心）</button>' : ""}
     </div>`;
+  if (newThemeRun) paintDex("resultDex", true);   // **押される ほうの 画面に 出す**
   document.getElementById("againBtn").addEventListener("click", start);
   document.getElementById("quitBtn").addEventListener("click", showTitle);
   const sn = document.getElementById("saveNow");
@@ -5192,15 +5238,18 @@ function loadSelectedChars(){
 /* けしきの 図鑑を えがく。**タイトルは innerHTML で 作りなおされる**ので、
    1回 書いて おわりに せず paint() から 毎回 よぶ こと。
    **色は DOM で 組みたてる。`innerHTML` に 名前を 入れない。** */
-function paintDex(){
-  const el = document.getElementById("themeDex");
+function paintDex(id, isNew){
+  const el = document.getElementById(id || "themeDex");
   if (!el) return;
   const pool = themePool();
   const got = pool.filter(t => seenThemes.includes(t.nm)).length;
   el.textContent = "";
   const lb = document.createElement("span");
-  lb.className = "lb";
-  lb.textContent = `けしき ${got} / ${pool.length}`;
+  lb.className = "lb" + (isNew ? " nw" : "");
+  // **けしきの 名前は ここでも 出さない。** そのまま あいことば なので、
+  // ならべて 見せると 称号の ごほうびで 1つずつ 教える しかけが 無意味に なる。
+  lb.textContent = isNew ? `✨ あたらしい けしき ${got} / ${pool.length}`
+                         : `けしき ${got} / ${pool.length}`;
   el.appendChild(lb);
   for (const t of pool){
     const i = document.createElement("i");
