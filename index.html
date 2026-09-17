@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="まめまる">
-<meta name="description" content="おなじ子どうしがくっつくと ちいさくなる、ふしぎな どうぶつパズル。">
+<meta name="description" content="同じ子どうしがくっつくと小さくなる、不思議な動物パズル。">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>まめまる 〜くっつくと ちいさくなる〜</title>
+<title>まめまる 〜くっつくと小さくなる〜</title>
 <style>
   * {
     box-sizing: border-box; -webkit-tap-highlight-color: transparent;
@@ -402,17 +402,17 @@
 <body>
 <div id="wrap">
   <div id="hud">
-    <div class="card"><div class="lbl">みおくった</div><div class="val" id="cur">0</div>
-      <div class="sub" id="curSub">いま 0にん</div></div>
+    <div class="card"><div class="lbl">見送った</div><div class="val" id="cur">0</div>
+      <div class="sub" id="curSub">今 0人</div></div>
     <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div>
-      <div class="sub" id="best">さいこう 0</div></div>
-    <div class="card keep" id="keepCard"><div class="lbl k">あずける</div><canvas id="keepCv"></canvas></div>
-    <div class="card next"><div class="lbl">つぎ</div><canvas id="nextCv"></canvas></div>
-    <button id="sound" title="おと">🔊</button>
+      <div class="sub" id="best">最高 0</div></div>
+    <div class="card keep" id="keepCard"><div class="lbl k">預ける</div><canvas id="keepCv"></canvas></div>
+    <div class="card next"><div class="lbl">次</div><canvas id="nextCv"></canvas></div>
+    <button id="sound" title="音">🔊</button>
   </div>
 
   <div id="risebar">
-    <span class="rl">よこく ⬆</span>
+    <span class="rl">予告 ⬆</span>
     <canvas id="riseCv" class="rp"></canvas>
     <div class="rb"><i id="riseFill"></i></div>
     <span class="rv" id="riseInfo">Lv.1 ⭐0</span>
@@ -433,25 +433,25 @@
       <canvas id="titleCv"></canvas>
       <p class="petMsg wide hidden" id="petMsg"></p>
       <p class="lead">
-        おなじ子が くっつくと <b>ちいさく</b> なる。<br>
-        <span class="lastName">いちばん ちいさい子</span>を <b>おおく みおくる</b>ほど 高とくてん。<br>
-        上のラインを こえないように！
+        同じ子がくっつくと<b>小さく</b>なる。<br>
+        <span class="lastName">いちばん小さい子</span>を<b>多く見送る</b>ほど高得点。<br>
+        上のラインを越えないように！
       </p>
       <div id="modes">
-        <button class="mode" data-m="0">まめまる ふえない</button>
-        <button class="mode" data-m="1">まめまる ふえる</button>
+        <button class="mode" data-m="0">まめまる 増えない</button>
+        <button class="mode" data-m="1">まめまる 増える</button>
       </div>
       <p class="modeinfo" id="modeInfo"></p>
-      <p class="howto">ゆびで よこ移動 → はなすと おとす</p>
+      <p class="howto">指で横に動かす → 離すと落ちる</p>
       <p class="myrec" id="myRec"></p>
       <div id="chain"><canvas id="chainCv"></canvas></div>
-      <button class="btn" id="startBtn">はじめる</button>
+      <button class="btn" id="startBtn">始める</button>
       <p class="hintMsg wide hidden" id="hintMsg"></p>
-      <button class="link" id="codeBtn">きろくを ほぞん・よみこみ</button>
-      <button class="link" id="editCharBtn">まめまるを えらびなおす</button>
-      <p class="pickHint hidden" id="pickHint">すきな まめまる を 6つ えらべるよ ✨</p>
-      <button class="link" id="slowBtn">かんがえじかん：ふつう</button>
-      <button class="link" id="calmBtn">えんしゅつを よわめる</button>
+      <button class="link" id="codeBtn">記録を保存・読み込み</button>
+      <button class="link" id="editCharBtn">まめまるを選びなおす</button>
+      <p class="pickHint hidden" id="pickHint">好きなまめまるを 6つ選べます ✨</p>
+      <button class="link" id="slowBtn">考える時間：普通</button>
+      <button class="link" id="calmBtn">演出をひかえめに</button>
     </div>
   </div>
 
@@ -459,27 +459,27 @@
   <!-- キャラ選択：#overlay とは べつの レイヤー（かさなり防止） -->
   <div id="charSelectOverlay" class="hidden">
     <div class="cs-inner">
-      <h2>すきな まめまる を 6つ えらんでね</h2>
-      <p class="hint">さきに えらんだ子ほど 大きくなります</p>
+      <h2>好きなまめまるを 6つ選んでください</h2>
+      <p class="hint">先に選んだ子ほど大きくなります</p>
       <div id="charGrid"></div>
       <div id="charOrder"></div>
-      <div id="charSelectCount">えらんだ数: 0 / 6</div>
-      <button class="btn" id="charSelectBtn" disabled>これで はじめる</button>
-      <button class="link" id="charCancelBtn">もどる</button>
+      <div id="charSelectCount">選んだ数: 0 / 6</div>
+      <button class="btn" id="charSelectBtn" disabled>これで始める</button>
+      <button class="link" id="charCancelBtn">戻る</button>
     </div>
   </div>
 
   <div id="save" class="hidden">
     <div class="box">
-      <h2>きろくを ほぞん・よみこみ</h2>
-      <p>この もじれつが あなたの きろくです。<br><b>メモに はっておくと、きろくが きえても もどせます。</b><br>ほかの きたいでも つづきから あそべます。</p>
+      <h2>記録を保存・読み込み</h2>
+      <p>この文字列があなたの記録です。<br><b>メモに貼っておくと、記録が消えても戻せます。</b><br>ほかの端末でも続きから遊べます。</p>
       <textarea id="saveCode" rows="2" readonly></textarea>
       <button class="btn tiny" id="copyBtn">コピーする</button>
-      <p>もらった もじれつを ここに はって よみこみます</p>
-      <textarea id="loadCode" rows="2" placeholder="ここに はりつけ"></textarea>
+      <p>もらった文字列をここに貼って読み込みます</p>
+      <textarea id="loadCode" rows="2" placeholder="ここに貼り付け"></textarea>
       <div class="btnrow" style="justify-content:center">
-        <button class="btn tiny" id="loadBtn">よみこむ</button>
-        <button class="btn sub tiny" id="closeSave">とじる</button>
+        <button class="btn tiny" id="loadBtn">読み込む</button>
+        <button class="btn sub tiny" id="closeSave">閉じる</button>
       </div>
       <p class="msg" id="saveMsg"></p>
     </div>
@@ -770,8 +770,13 @@ function scoreNow(){ return popScore + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
 // ゆかは どちらのモードでも せりあがる。ちがいは 下から キャラが わくか どうか
-let spawnRows = false;
-try { spawnRows = localStorage.getItem("mamemaru-spawn") === "1"; } catch(e){}
+/* **既定は「まめまる 増える」。** 圧力の ある モードで しか 深く 考えた 見返りが
+   出ない（実測：増える d1 107.5 → d3 134.5（+25%）／増えない 114 → 118.5（+4%））。
+   **すでに 自分で えらんだ人の 設定は 変えない。** null の ときだけ 既定を つかう。
+   `=== "1"` だけで 読むと、「増えない」を えらんだ人も まとめて 塗りつぶす。 */
+let spawnRows = true;
+try { const _sp = localStorage.getItem("mamemaru-spawn");
+      if (_sp !== null) spawnRows = (_sp === "1"); } catch(e){}
 let riseGlow = 0;                    // ゆかの下が ひかる のこり時間
 /* **「この列には おとせない」を 絵で 出す。**
    もとは `beep(330, 音量.05)` だけで、**画面は 1ピクセルも 変わらなかった**。
@@ -821,6 +826,9 @@ const LV_BACK_MAX = 2;             // 1ゲームで もどせる かいすう
 let levelAdj = 0, lvBackCool = 0, lvBackLeft = LV_BACK_MAX;
 function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_SEC)); }
 function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8); }
+/* **ゆかは 時計だけで 上げる。落とした回数を 混ぜない。**
+   「時計と 落下数の 早いほう」を 2026-09-17 に 作って 800ゲーム 測り、捨てた。
+   くわしくは CLAUDE.md の「ゆかを 落下数でも 上げる案（捨てた）」。 */
 function dropDelay(){ return Math.max(.17, .44 - (level-1) * .035); }
 /* かんがえじかん。**「ゆっくり」を えらべる。**
    5.0びょう 固定では 4歳児・70代・手が ふるえる 人には
@@ -867,26 +875,26 @@ function saveRec(){
 
 const MISSION_DEFS = [
   () => { const n = Math.max(pick([20,23,26,29]), cur + 4);   // いまより ふやす
-          return { id:"collect", need:n, prog:0, text:`どうぶつを ${n}にん あつめる` }; },
+          return { id:"collect", need:n, prog:0, text:`動物を ${n}人集める` }; },
   // **キャラの 名前を 直書き しない。** 顔ぶれを えらべる ので 嘘に なる
   // （じっさい 「ひよこを 11かい みおくる」が ひよこの いない 回で 出て いた）。
   // つくる／ならべる の おだいは はじめから TIERS を 見て いたのに、
   // ここだけ もれて いた。いちばん 小さい子＝`TIERS[LAST]`。
   () => { const n = pick([8,11,14]);
-          return { id:"pop", need:n, prog:0, text:`${TIERS[LAST].name}を ${n}かい みおくる` }; },
+          return { id:"pop", need:n, prog:0, text:`${TIERS[LAST].name}を ${n}回見送る` }; },
   // つくる おだいは いちばん大きい子 いがいの ぜんぶを たいしょうに する
   () => { const k = 1 + ((Math.random()*5)|0), n = pick([12,16,20]);
-          return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}にん つくる` }; },
+          return { id:"make", tier:k, need:n, prog:0, text:`${TIERS[k].name}を ${n}人作る` }; },
   () => { const n = pick([45,60,80]);
-          return { id:"drop", need:n, prog:0, text:`${n}かい おとす` }; },
+          return { id:"drop", need:n, prog:0, text:`${n}回落とす` }; },
   () => { const n = pick([50,70,90]);
-          return { id:"live", need:n, prog:0, text:`${n}びょう もちこたえる` }; },
+          return { id:"live", need:n, prog:0, text:`${n}秒持ちこたえる` }; },
   () => { let nb = 0;
           for (const b of balls) if (b.tier === 0) nb++;
           const n = Math.max(pick([4,5]), nb + 1);              // いまより ふやす
-          return { id:"bear", need:n, prog:0, text:`${TIERS[0].name}を ${n}にん ならべる` }; },
+          return { id:"bear", need:n, prog:0, text:`${TIERS[0].name}を ${n}人並べる` }; },
   () => { const n = pick([2,3]);
-          return { id:"chain", need:n, prog:0, text:`4れんさ いじょうを ${n}かい だす` }; },
+          return { id:"chain", need:n, prog:0, text:`4連鎖以上を ${n}回出す` }; },
 ];
 
 const msEls = [...document.querySelectorAll("#missions .ms")];
@@ -939,7 +947,7 @@ function completeMission(i){
   }
   const el = msEls[i];
   el.classList.remove("done"); void el.offsetWidth; el.classList.add("done");
-  showToast("おだい クリア！ ⭐" + stamps, m.text + " ／ せりあがりが すこし おそくなった");
+  showToast("お題クリア！ ⭐" + stamps, m.text + " ／ せり上がりが少し遅くなった");
   for (let k = 0; k < 3; k++)
     setTimeout(() => burst(rnd(60, CW-60), rnd(150, 300), pick(["#ffd86b","#ff9ec4","#9fe0ff"]), 16, 1.5), k*90);
   flash(.22);
@@ -1220,7 +1228,7 @@ const riseBar  = document.getElementById("risebar");
 function updateRiseBar(){
   riseBar.classList.toggle("nofloor", !spawnRows);   // よこくの え を 出すか
   riseBar.classList.toggle("playing", state === "play");
-  if (riseLabel) riseLabel.textContent = spawnRows ? "よこく ⬆" : "ゆか ⬆";
+  if (riseLabel) riseLabel.textContent = spawnRows ? "予告 ⬆" : "床 ⬆";
   const p = state === "play" ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
   riseFill.style.width = (p*100).toFixed(0) + "%";
   riseInfo.textContent = "Lv." + level + " \u2b50" + stamps;
@@ -1232,9 +1240,9 @@ function updateHUD(){
   // 結果画面の「みおくり NN」は 点数（＝かいすう × 3）なので、
   // どちらも「みおくり」だと **同じ ことばで ちがう 数字**に 見えて まぎれる。
   elCur.textContent = pops;
-  if (elCurSub) elCurSub.textContent = "いま " + cur + "にん";
+  if (elCurSub) elCurSub.textContent = "今 " + cur + "人";
   elScore.textContent = scoreNow();
-  elBest.textContent = "さいこう " + Math.max(best, bestRef());
+  elBest.textContent = "最高 " + Math.max(best, bestRef());
   if (elDrops) elDrops.textContent = drops;
 }
 
@@ -1487,7 +1495,7 @@ function chainFinale(n, x, y){
   if (sec >= .5){
     riseBonusUsed += sec;
     riseT = Math.min(riseSpan, riseT + sec);        // ためこめるのは 1かいぶん まで
-    bonus = "+" + pts + "点 ／ せりあがり +" + sec.toFixed(1) + "びょう";
+    bonus = "+" + pts + "点 ／ せり上がり +" + sec.toFixed(1) + "秒";
   } else if (n >= 6){
     stamps++;                                        // じかんが もらえない ぶんは ⭐に
     bonus = "+" + pts + "点 ／ ⭐ボーナス！";
@@ -1500,8 +1508,8 @@ function chainFinale(n, x, y){
     lvBackCool = LV_BACK_COOL;
     lvBackLeft--;
     const nl = levelAt(elapsed - levelAdj);
-    bonus = "はやさが Lv." + nl + " に もどった！"
-          + (lvBackLeft > 0 ? "（あと" + lvBackLeft + "かい）" : "（さいご）");
+    bonus = "速さが Lv." + nl + " に戻った！"
+          + (lvBackLeft > 0 ? "（あと" + lvBackLeft + "回）" : "（最後）");
     for (let i = 0; i < 18; i++)
       fx.push({ t:"st", x: rnd(WALL_L, WALL_R), y: rnd(DANGER, DANGER + 220),
                 vx: rnd(-70,70), vy: rnd(60, 220), rot: rnd(0,6.3), rotv: rnd(-8,8),
@@ -1509,7 +1517,7 @@ function chainFinale(n, x, y){
   }
   if (n >= 8){
     floorY = Math.min(FLOOR0, floorY + RISE_STEP);
-    bonus = "+" + pts + "点 ／ ゆかが さがった！";
+    bonus = "+" + pts + "点 ／ 床が下がった！";
     for (let i = 0; i < 14; i++)
       fx.push({ t:"p", x: rnd(WALL_L, WALL_R), y: floorY - rnd(0, 26),
                 vx: rnd(-90,90), vy: rnd(-260,-90), r: rnd(3,7),
@@ -3295,7 +3303,7 @@ function pinTheme(nm){
   const t = themePool().find(x => x.nm === nm);   // 解放前の ほしぞらは 見つからない
   if (!t) return null;
   pinnedTheme = t;
-  return "つぎの ゲームは 「" + nm + "」 だよ";
+  return "次のゲームは「" + nm + "」だよ";
 }
 
 function pickTheme(){
@@ -3967,7 +3975,7 @@ function drawClearText(){
 
   ctx.font = `bold ${size*.3}px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif`;
   ctx.lineWidth = size*.1; ctx.strokeStyle = "#ffffff";
-  const sub = clearFx.n + "にん おそうじ ＋" + Math.ceil(clearFx.n/3) + "点";   // 実加算（clearAll）と そろえる
+  const sub = clearFx.n + "人 全消し ＋" + Math.ceil(clearFx.n/3) + "点";   // 実加算（clearAll）と そろえる
   ctx.strokeText(sub, 0, size*.82);
   ctx.fillStyle = "#7a6154";
   ctx.fillText(sub, 0, size*.82);
@@ -3999,7 +4007,7 @@ function drawChainText(){
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
 
-  const label = live ? (n + " れんさ") : (n + " れんさ!!");
+  const label = live ? (n + " 連鎖") : (n + " 連鎖!!");
   ctx.font = `bold ${size}px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif`;
 
   // かげ
@@ -4433,25 +4441,25 @@ function gameOver(byUser){
   //  その回の 出来は 見出しと 点数と 内わけが 伝える。称号は 身分。
   const topBest = Math.max(bestEver, bestFreeEver);
   const next = nextGoal(topBest);
-  const modeName = spawnRows ? "まめまる ふえる" : "まめまる ふえない";
+  const modeName = spawnRows ? "まめまる 増える" : "まめまる 増えない";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
   overlay.innerHTML = `
     <div class="panel">
       <h1>${rainbowRun ? "にじいろ おつかれさま！ 🌈"
-            : isRec ? "あたらしい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
+            : isRec ? "新しい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
       <div class="big">${sc} <span style="font-size:16px">点</span></div>
-      <p class="calc">みおくり ${popScore} ＋ れんさ ${chainScore} ＋ おそうじ ${clearScore}</p>
+      <p class="calc">見送り ${popScore} ＋ 連鎖 ${chainScore} ＋ 全消し ${clearScore}</p>
       <p class="rank">${rankOf(topBest)}</p>
-      <p>つぎの目標：${next}</p>
-      <p class="ms-got">⭐ おだい ${stamps} こ たっせい</p>
+      <p>次の目標：${next}</p>
+      <p class="ms-got">⭐ お題 ${stamps}個 達成</p>
       <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
-        rainbowRun ? " ／ 🌈 にじいろ（きろくには のこりません）" : ""}</p>
+        rainbowRun ? " ／ 🌈 にじいろ（記録には残りません）" : ""}</p>
       <div class="btnrow">
-        <button class="btn" id="againBtn">もういちど</button>
-        <button class="btn sub" id="quitBtn">おわる</button>
+        <button class="btn" id="againBtn">もう一度</button>
+        <button class="btn sub" id="quitBtn">終わる</button>
       </div>
-      ${isRec ? '<button class="link" id="saveNow">きろくを ほぞん（メモに はっておくと あんしん）</button>' : ""}
+      ${isRec ? '<button class="link" id="saveNow">記録を保存（メモに貼っておくと安心）</button>' : ""}
     </div>`;
   document.getElementById("againBtn").addEventListener("click", start);
   document.getElementById("quitBtn").addEventListener("click", showTitle);
@@ -4489,7 +4497,7 @@ function copyCode(){
     saveCode.setSelectionRange(0, v.length);
     let ok = false;
     try { ok = document.execCommand("copy"); } catch(e){}
-    saveMsg.textContent = ok ? "コピーしました！" : "ながおしして コピーしてね";
+    saveMsg.textContent = ok ? "コピーしました！" : "長押ししてコピーしてね";
   }
 }
 /* かならず 0以上の 整数に する（なにが きても こわれないように） */
@@ -4508,12 +4516,12 @@ function safeNum(x){
    「ひみつ」は **しりとりの ヒント**に して、隠しコマンドどうしを つないで ある。
    ============================================================ */
 const SECRET_WORDS = {
-  "まめまる":   () => { hopAll(true); return "よんだ？"; },
-  "ひみつ":     () => "なまえを ならべて しりとりが できるよ",
-  "しりとり":   () => "6ひき つながるのは 1とおりだけ。「ん」で おわるよ",
+  "まめまる":   () => { hopAll(true); return "呼んだ？"; },
+  "ひみつ":     () => "名前を並べてしりとりができるよ",
+  "しりとり":   () => "6匹つながるのは 1とおりだけ。「ん」で終わるよ",
   "ありがとう": () => { hopAll(true); return "こちらこそ ありがとう！"; },
   // ほしぞらは 解放ずみ なら えらべる。まだなら ヒントだけ。
-  "ほしぞら":   () => starUnlocked ? pinTheme("ほしぞら") : "そらは なでると 出るよ",
+  "ほしぞら":   () => starUnlocked ? pinTheme("ほしぞら") : "空はなでると出るよ",
 
   // シークレットの あいことばの ヒント。**3語を そのまま ならべるだけ**に する。
   // 1つずつ 試して みる ところまでが 遊びなので、どれが どの子かは 言わない。
@@ -4534,13 +4542,13 @@ const SECRET_WORDS = {
 function gainChar(nm){
   const isNew = unlockChar(nm);
   setTimeout(() => { closeSave(); showCharSelect(); }, 1100);
-  return isNew ? nm + " が なかまに なったよ！ 🎉"
-               : nm + " は もう なかまだよ";
+  return isNew ? nm + " が仲間になったよ！ 🎉"
+               : nm + " はもう仲間だよ";
 }
 
 function loadFromCode(){
   const v = (loadCode.value || "").trim();
-  if (!v){ saveMsg.textContent = "もじれつを はりつけてね"; return; }
+  if (!v){ saveMsg.textContent = "文字列を貼り付けてね"; return; }
   // あいことばが さきに 当たるか みる（コードの かたち検査より 前）
   const say = (txt) => {
     saveMsg.textContent = "🌸 " + txt;
@@ -4558,8 +4566,8 @@ function loadFromCode(){
   // 解放前の ほしぞらは pool に いない ので ここでは 当たらない。
   const pinned = pinTheme(v);
   if (pinned){ say(pinned); return; }
-  if (v.length > 400){ saveMsg.textContent = "もじれつが ながすぎます"; return; }
-  if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.textContent = "もじれつが ちがうみたい…"; return; }
+  if (v.length > 400){ saveMsg.textContent = "文字列が長すぎます"; return; }
+  if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.textContent = "文字列が違うみたい…"; return; }
   try {
     const o = JSON.parse(decodeURIComponent(escape(atob(v))));
     if (!o || typeof o !== "object" || Array.isArray(o)) throw 0;
@@ -4577,9 +4585,9 @@ function loadFromCode(){
     // 「えらべるよ」の ひとこと、ぜんぶ ここで 直る。
     if (titlePaint) titlePaint();
     saveCode.value = myCode();
-    saveMsg.textContent = "よみこみました！ さいこう " + bestRef() + "点";
+    saveMsg.textContent = "読み込みました！ 最高 " + bestRef() + "点";
   } catch(e){
-    saveMsg.textContent = "もじれつが ちがうみたい…";
+    saveMsg.textContent = "文字列が違うみたい…";
   }
 }
 /* 「やめる」は 2だんかい。1回目は 文字が かわるだけ */
@@ -4589,7 +4597,7 @@ giveUpBtn.addEventListener("click", () => {
   if (state !== "play") return;
   if (giveUpArm > 0){ giveUpArm = 0; giveUpBtn.textContent = "やめる"; gameOver(true); return; }
   giveUpArm = 2.2;
-  giveUpBtn.textContent = "ほんとに？";
+  giveUpBtn.textContent = "本当に？";
   beep(420, .08, "sine", .06);
 });
 document.getElementById("copyBtn").addEventListener("click", copyCode);
@@ -4690,7 +4698,7 @@ function petAt(px, py){
     // **解放した ことが わかる ように、つぎの ゲームを その けしきに する。**
     // 「いつか ランダムで 出ます」だけでは 解放されたのか どうか わからない。
     pinTheme("ほしぞら");
-    showPetMsg("🌟 ほしぞら が でるように なったよ！ つぎの ゲームは ほしぞら");
+    showPetMsg("🌟 ほしぞら が出るようになったよ！ 次のゲームは ほしぞら");
   }
 }
 function showPetMsg(txt){
@@ -4794,15 +4802,15 @@ function initCharSelect(){
     if (!orderEl) return;
     const idxs = Array.from(selected);
     if (!idxs.length){
-      orderEl.innerHTML = '<div class="empty">えらぶと ここに ならびます</div>';
+      orderEl.innerHTML = '<div class="empty">選ぶとここに並びます</div>';
       return;
     }
     // しりとりが そろったか（順番も ふくめて）
     const hit = isShiritori(idxs.map(k => ALL_CHARACTERS[k]));
     orderEl.classList.toggle("shiritori", hit);
     orderEl.innerHTML = hit
-      ? '<div class="ttl">🌈 しりとり！ さいごが「ん」で おわっちゃった 🌈</div>'
-      : '<div class="ttl">おおきい → ちいさい（くっつくと 右へ）</div>';
+      ? '<div class="ttl">🌈 しりとり！ 最後が「ん」で終わっちゃった 🌈</div>'
+      : '<div class="ttl">大きい → 小さい（くっつくと右へ）</div>';
     const row = document.createElement("div");
     row.className = "row";
 
@@ -4844,7 +4852,7 @@ function initCharSelect(){
     if (hit){
       const p = document.createElement("div");
       p.className = "sh";
-      p.textContent = "にじいろ まめまる で あそべるよ（きろくには のこりません）";
+      p.textContent = "にじいろまめまるで遊べるよ（記録には残りません）";
       orderEl.appendChild(p);
       // そろった しゅんかんだけ ファンファーレ。えがきなおすたび 鳴らさない
       if (!orderEl.dataset.rang){
@@ -4858,7 +4866,7 @@ function initCharSelect(){
   };
 
   const paintCount = () => {
-    countEl.textContent = `えらんだ数: ${selected.size} / 6`;
+    countEl.textContent = `選んだ数: ${selected.size} / 6`;
     selectBtn.disabled = selected.size !== 6;
     // バッジを 何ばんめに えらんだかの 数字に する
     const idxs = Array.from(selected);
@@ -5039,22 +5047,22 @@ function bindTitleButtons(){
     btns.forEach(o => o.classList.toggle("on",
       (o.getAttribute("data-m") === "1") === spawnRows));
     if (info) info.textContent = spawnRows
-      ? "ゆかが あがり、下からも まめまるが ふえてくる"
-      : "ゆかが すこしずつ あがってくる";
+      ? "床が上がり、下からもまめまるが増えてくる"
+      : "床が少しずつ上がってくる";
     best = bestRef();
     // つみあがっている かんじが 見えるように、記録と 称号と ⭐を 出す
     if (rec){
       const b = bestRef();
       rec.innerHTML = b > 0
-        ? `さいこう ${b}点 ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}かいめ</span>`
-        : `<span>まずは ${RANK_STEPS[0]}点 を めざそう</span>`;
+        ? `最高 ${b}点 ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}回目</span>`
+        : `<span>まずは ${RANK_STEPS[0]}点を目指そう</span>`;
     }
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
-    if (calm) calm.textContent = calmFx ? "えんしゅつ ひかえめ：ON" : "えんしゅつを よわめる";
+    if (calm) calm.textContent = calmFx ? "演出ひかえめ：ON" : "演出をひかえめに";
     const slow = document.getElementById("slowBtn");
-    if (slow) slow.textContent = "かんがえじかん：" + (slowMode ? "ゆっくり" : "ふつう");
+    if (slow) slow.textContent = "考える時間：" + (slowMode ? "ゆっくり" : "普通");
     // まだ 出して いない ヒントが あれば、ここで はじめて「出した」ことに する
     const hm = document.getElementById("hintMsg");
     if (pendingHint && hm){
@@ -5113,18 +5121,18 @@ function showTitle(){
    いちばん 上は でんせつで ある べき）。**前は 上4段が 届かなかった**ので
    むしろ 良く なって いる。 */
 const RANK_STEPS = [10, 18, 28, 40, 55, 75, 100, 130, 165, 210, 270];
-const RANK_TITLES = { 10:"まめまる みならい", 18:"まめまる しゅぎょうちゅう", 28:"まめまる つかい",
-                      40:"まめまる じょうず", 55:"まめまる たつじん", 75:"まめまる せんせい",
-                      100:"まめまる はかせ", 130:"まめまる マスター", 165:"まめまる おう",
-                      210:"でんせつの まめまる", 270:"まめまる かみさま" };
+const RANK_TITLES = { 10:"まめまる見習い", 18:"まめまる修行中", 28:"まめまる使い",
+                      40:"まめまる上手", 55:"まめまる達人", 75:"まめまる先生",
+                      100:"まめまる博士", 130:"まめまるマスター", 165:"まめまる王",
+                      210:"伝説のまめまる", 270:"まめまる神さま" };
 function rankOf(n){
   let got = null;
   for (const s of RANK_STEPS) if (n >= s) got = s;
-  return got ? RANK_TITLES[got] : "まめまる はじめました";
+  return got ? RANK_TITLES[got] : "まめまる始めました";
 }
 function nextGoal(n){
   const goal = RANK_STEPS.find(s => s > n) || (n + 60);
-  return `${goal}点（${RANK_TITLES[goal] || "まめまる かみさま"}）`;
+  return `${goal}点（${RANK_TITLES[goal] || "まめまる神さま"}）`;
 }
 
 /* ============================================================
@@ -5192,7 +5200,7 @@ function checkRankHint(){
   // 33点（しゅぎょうちゅう）の 人に 段の 名前（みならい）で 声を かけると、
   // すぐ上の 記録表示と 食いちがって 見える（じっさい そう 見えた）。
   pendingHint = "🌸 " + rankOf(top) +
-                "！ ↓の はこに 「" + word + "」 と いれてみて";
+                "！ ↓の箱に「" + word + "」と入れてみて";
 }
 
 
@@ -5411,7 +5419,7 @@ function renderLadder(){
 
   g.textAlign = "center";
   g.fillStyle = "#d79ab4"; g.font = "bold 9px sans-serif";
-  g.fillText("おおきい", W/2, 15);
+  g.fillText("大きい", W/2, 15);
 
   // 6体ぶんの 高さを 出して、あまりを すきまに くばる
   const TOP = 24, BOT = 40, ARW = 9;
@@ -5502,8 +5510,8 @@ function renderChainBar(su){
 
   // みだし
   g.font = "bold 9px sans-serif"; g.textAlign = "left";
-  g.fillStyle = "#e79ab6"; g.fillText("おおきい", 10, 14);
-  g.textAlign = "right"; g.fillText("ちいさい ✨", W - 10, 14);
+  g.fillStyle = "#e79ab6"; g.fillText("大きい", 10, 14);
+  g.textAlign = "right"; g.fillText("小さい ✨", W - 10, 14);
   g.textAlign = "center";
 
   for (const p of parts){
