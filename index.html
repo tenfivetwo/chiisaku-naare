@@ -104,6 +104,10 @@
   }
   #overlay.result .ms-got { font-size: 13px; font-weight: 700; color: #d9a23c; }
   #overlay.result .calc { font-size: 12px; color: #a58e83; margin-top: -3px; }
+  /* やりかけの おだい。⭐の 行の すぐ下に、ひとまわり 小さく。
+     **出すのは いちばん おしい 1つ だけ。** ここは もう 8項目 あって
+     いちばん 混む ところ なので、2つ 出すと 点数が うもれる。 */
+  #overlay.result .ms-left { font-size: 11.5px; color: #b0894f; margin-top: -4px; }
   #overlay h1 { margin: 0; font-size: 30px; color: #f2789a; letter-spacing: .04em; white-space: nowrap; }
   #overlay .myrec {
     margin: 2px 0 0; font-size: 12px; font-weight: 700; color: #e0799f;
@@ -223,6 +227,19 @@
 
   /* 1回 遊んだ あとだけ 出る ひとこと。えらび画面を 最初に 出さない かわり。 */
   #overlay p.pickHint { font-size: 11px; color: #e08aa8; margin-top: -4px; }
+
+  /* けしきの 図鑑。**たての 予算を 食わない こと**（ここは いつも 足りて いない）。
+     ぜんぶで 22px。せまい 画面では さらに 縮める。 */
+  #overlay .dex { display: flex; align-items: center; justify-content: center;
+    gap: 4px; flex-wrap: wrap; margin: -2px 0 0; }
+  #overlay .dex .lb { font-size: 10px; color: #b79aa8; letter-spacing: .04em;
+    margin-right: 2px; white-space: nowrap; }
+  #overlay .dex i { display: block; width: 14px; height: 14px; border-radius: 4px; }
+  #overlay .dex i.no { background: none; border: 1px dashed #dcc4cf; }
+  @media (max-height: 700px){
+    #overlay .dex i { width: 11px; height: 11px; border-radius: 3px; }
+    #overlay .dex .lb { font-size: 9px; }
+  }
 
   /* タイトルに **よこに ながい 文**を 足す ときは かならず これを つけること。
      `#overlay` は 画面ぜんたいに ひろがる ので、max-width が ないと
@@ -375,6 +392,15 @@
   /* あいことばで 手に 入れた 子。ふつうの子と 見わけが つくように */
   .charCard.secretCard { box-shadow: 0 0 0 2px #ffd9a8, 0 3px 10px rgba(210,160,90,.28); }
   .charCard.secretCard .name::after { content: " ✨"; }
+  /* まだ 遊んで いない子。**ひだり上**に 小さな しるし
+     （みぎ上は えらんだ ときの チェックが つかう）。
+     えらぶと カードが ピンクに なるので、その ときは 白に する。 */
+  .charCard.newChar::before {
+    content: ""; position: absolute; top: 6px; left: 6px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #f2789a; box-shadow: 0 0 0 2px #fff;
+  }
+  .charCard.newChar.selected::before { background: #fff; box-shadow: 0 0 0 2px #f78bad; }
   /* 隠しコマンド「しりとり」が そろった ときだけ */
   #charOrder.shiritori {
     background: linear-gradient(135deg,#fff4fb,#f3f8ff 40%,#fffaf0);
@@ -444,6 +470,7 @@
       <p class="modeinfo" id="modeInfo"></p>
       <p class="howto">指で横に動かす → 離すと落ちる</p>
       <p class="myrec" id="myRec"></p>
+      <div class="dex" id="themeDex"></div>
       <div id="chain"><canvas id="chainCv"></canvas></div>
       <button class="btn" id="startBtn">始める</button>
       <p class="hintMsg wide hidden" id="hintMsg"></p>
@@ -460,7 +487,7 @@
   <div id="charSelectOverlay" class="hidden">
     <div class="cs-inner">
       <h2>好きなまめまるを 6つ選んでください</h2>
-      <p class="hint">先に選んだ子ほど大きくなります</p>
+      <p class="hint" id="charHint">先に選んだ子ほど大きくなります</p>
       <div id="charGrid"></div>
       <div id="charOrder"></div>
       <div id="charSelectCount">選んだ数: 0 / 6</div>
@@ -768,6 +795,9 @@ function chainPts(n, spread){
    **`elapsed` 自体は おだい「Nびょう もちこたえる」で つかう ので のこす。** */
 function scoreNow(){ return popScore + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
+// 「こえちゃった！」の 赤い印の のこり時間。**宣言は ここ**（reset() より 上）。
+// drawOverMark の そばに 置くと 起動時に 「初期化前に さわった」で 落ちる（ladCtx と 同じ わな）
+let overMarkT = 0;
 let bctx = null;                     // 下の 図鑑バー（タイトル画面の中）
 // ゆかは どちらのモードでも せりあがる。ちがいは 下から キャラが わくか どうか
 /* **既定は「まめまる 増える」。** 圧力の ある モードで しか 深く 考えた 見返りが
@@ -825,7 +855,15 @@ const LV_BACK_COOL = 60;           // つぎに もどせるまでの まち時�
 const LV_BACK_MAX = 2;             // 1ゲームで もどせる かいすう
 let levelAdj = 0, lvBackCool = 0, lvBackLeft = LV_BACK_MAX;
 function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_SEC)); }
-function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8); }
+/* **せり上がりの 間隔は 1.5倍（2026-09-17）。** Lv1 で 22 → **33秒**。
+   もとの 22秒は みじかすぎた。1000ゲーム（1.0 / 1.5 / 2.0倍 × 各200 ＋ 裏どり400）で
+   1.5倍が **うでまえの 出方が いちばん 良い**と 出た。くわしくは 設計判断6-C。
+   **2.0倍まで のばしては いけない。** ねらいの うまさが 1手あたりの 点に
+   まったく 効かなく なる（ρ +0.12 → −0.03）。
+   ここは かけ算で 持つ こと。段ごとの 数字（22 / 1.8）を 直に 書きかえると、
+   もとが どれだけ だったか 分からなく なる。 */
+const RISE_MUL = 1.5;
+function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8) * RISE_MUL; }
 /* **ゆかは 時計だけで 上げる。落とした回数を 混ぜない。**
    「時計と 落下数の 早いほう」を 2026-09-17 に 作って 800ゲーム 測り、捨てた。
    くわしくは CLAUDE.md の「ゆかを 落下数でも 上げる案（捨てた）」。 */
@@ -908,9 +946,46 @@ function newMission(){
   m.done = false; m.doneT = 0;
   return m;
 }
+/* **やりかけの おだいは つぎの ゲームに 持ちこす（2026-09-17）。**
+   もとは 毎ゲーム まるごと 作りなおして いて、「20人集める」が 18人で 終わっても
+   **その18は 消えて いた**。「あと すこしだった」は もういちど 押させる
+   いちばん つよい きもち なのに、ゲームが 自分で 捨てて いた。
+
+   **持ちこせるのは 積みあげ型の 4つだけ。**
+   `collect`（同時に 何人）と `bear`（同時に 何人 ならぶ）は **その瞬間の 盤面**を
+   見て いて、`need` も つくる ときの 盤面から 決めて いる（`cur + 4`／`nb + 1`）ので
+   持ちこしても 意味を なさない。`live` も その ゲームの 経過秒から 数える。
+
+   **名前の 入った 文は かならず 作りなおす こと。** `pop` と `make` の text には
+   `TIERS[...].name` が 焼きこまれて いる ので、あいだに 顔ぶれを 変えられると
+   **いない子の 名前が のこる**（「ひよこを 11回見送る」が ひよこの いない 回に
+   出て いた のと まったく 同じ 事故）。
+
+   **進みが 0 の ものは 持ちこさない。** 毎回 おなじ おだいが 居すわると
+   「まいかい ちがう」が 消える。持ちこすのは やりかけ だけ。 */
+const MISSION_CARRY = ["pop", "make", "drop", "chain"];
+function retextMission(m){
+  if (m.id === "pop")  m.text = `${TIERS[LAST].name}を ${m.need}回見送る`;
+  if (m.id === "make") m.text = `${TIERS[m.tier].name}を ${m.need}人作る`;
+  return m;
+}
+/* 結果画面に 出す「いちばん おしい おだい」。なければ null。 */
+function nearestMission(){
+  let top = null;
+  for (const m of missions){
+    if (!m || m.done || m.prog <= 0 || !MISSION_CARRY.includes(m.id)) continue;
+    const left = m.need - m.prog;
+    if (left <= 0) continue;
+    if (!top || left < top.left) top = { left, text: m.text };
+  }
+  return top;
+}
 function resetMissions(){
-  missions = []; stamps = 0;
-  for (let i = 0; i < 2; i++) missions.push(newMission());
+  const keep = missions.filter(m => m && !m.done && m.prog > 0
+                                     && MISSION_CARRY.includes(m.id))
+                       .map(retextMission);
+  missions = keep.slice(0, 2); stamps = 0;
+  while (missions.length < 2) missions.push(newMission());
   renderMissions();
 }
 function renderMissions(){
@@ -1088,7 +1163,7 @@ function reset(){
   cur = 0; drops = 0; pops = 0; overTimer = 0; dropLock = 0; shake = 0;
   elapsed = 0; level = 1; rises = 0;
   chain = 0; chainT = 0; chainBest = 0; chainFx = null; riseBonusUsed = 0;
-  overBall = null; riseGlow = 0; dangerBall = null; clearedNow = false;
+  overBall = null; riseGlow = 0; dangerBall = null; clearedNow = false; overMarkT = 0;
   overCount = OVER_GRACE; safeT = 0; tickSec = -1;
   levelAdj = 0; lvBackCool = 0; lvBackLeft = LV_BACK_MAX;
   nextRow = makeRow();
@@ -3283,6 +3358,35 @@ let starUnlocked = false;
 try { starUnlocked = localStorage.getItem("mamemaru-star") === "1"; } catch(e){}
 function themePool(){ return starUnlocked ? THEMES.concat([STAR_THEME]) : THEMES; }
 
+/* **見た けしき・遊んだ 子 を おぼえる（2026-09-17）。**
+   けしきは 10種類 あるのに、**遊ぶ人は その事実を どこでも 知らなかった**。
+   1ゲームに 1回 変わる ものが、ただの ランダムな 背景に 見えて いた。
+   まだ 見て いない ものが ある と 分かると、はじめる が「引き」に なる。
+
+   **名前は 出さない。色だけ。** けしきの 名前は そのまま あいことば
+   （`ゆきのひ` と 入れると つぎの 1ゲームが それに なる）なので、
+   9個 ならべて 見せると **称号の ごほうびで 1つずつ 教える しかけが
+   まるごと 無意味に なる**。出すのは「まだ 3つ ある」という 手ごたえだけ。
+
+   **ほしぞらの ぶんの 枠は 解放前に 出さない こと。** 枠が 10個 あると
+   「もう1つ 何か ある」と 分かって しまう。`themePool()` を 見て いる ので
+   解放した ときに **列が 1つ のびる** ── それ自体が ごほうびに なる。 */
+let seenThemes = [];
+let playedChars = [];
+try { seenThemes  = JSON.parse(localStorage.getItem("mamemaru-themes") || "[]"); } catch(e){}
+try { playedChars = JSON.parse(localStorage.getItem("mamemaru-chars")  || "[]"); } catch(e){}
+if (!Array.isArray(seenThemes))  seenThemes  = [];
+if (!Array.isArray(playedChars)) playedChars = [];
+function markSeen(){
+  try {
+    if (TH && TH.nm && !seenThemes.includes(TH.nm)) seenThemes.push(TH.nm);
+    for (const c of (selectedTiers || []))
+      if (c && c.name && !playedChars.includes(c.name)) playedChars.push(c.name);
+    localStorage.setItem("mamemaru-themes", JSON.stringify(seenThemes.slice(0, 40)));
+    localStorage.setItem("mamemaru-chars",  JSON.stringify(playedChars.slice(0, 40)));
+  } catch(e){}
+}
+
 let TH = THEMES[0];
 
 const DECO = [];
@@ -3505,8 +3609,9 @@ function draw(){
   ctx.textAlign = "start";
 
   // ゲームオーバー：どの子が こえたのか はっきり見せる
-  if (state === "over"){
+  if (state === "over" && overMarkT > 0){
     ctx.save();
+    ctx.globalAlpha = Math.min(1, overMarkT / .6);
     const bl = .55 + .45*Math.sin(time*7);
     ctx.fillStyle = `rgba(255,90,120,${.1 + .07*bl})`;
     ctx.fillRect(WALL_L, 114, WALL_R-WALL_L, DANGER - 114);
@@ -3594,9 +3699,16 @@ function draw(){
       ctx.restore();
     }
     ctx.rotate(Math.max(-.5, Math.min(.5, b.ang)) * .5);
-    if (b.danger > .2){
+    // **けっか画面まで 出しっぱなしに しない。**
+    // `b.danger` は `state === "play"` の ループでしか 減らない ので、
+    // ゲームオーバーの しゅんかんの 値で **凍る**。結果画面で
+    // **ラインを こえた子 ぜんぶが ずっと 赤く 点滅した ままに なって いた**
+    // （2026-09-17 に 発見。見送った子が 走る うしろで これが 鳴って いた）。
+    // 決着の 2.2びょうだけ のこして、あとは `overMarkT` と 一緒に 引く。
+    const dangerVis = state === "play" ? 1 : Math.min(1, overMarkT / .6);
+    if (b.danger > .2 && dangerVis > 0){
       ctx.save();
-      ctx.globalAlpha = .35 + .35*Math.sin(time*12);
+      ctx.globalAlpha = (.35 + .35*Math.sin(time*12)) * dangerVis;
       ctx.strokeStyle = "#ff5f83"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(0,0, b.r+4, 0, 7); ctx.stroke();
       ctx.restore();
@@ -3890,9 +4002,16 @@ function drawCountdown(){
   ctx.restore();
 }
 
-/* ゲームオーバー：こえた子を いちばん手前で 指ししめす */
+/* ゲームオーバー：こえた子を いちばん手前で 指ししめす。
+   **出しっぱなしに しない（2026-09-17）。** けっか画面は 見送った子が
+   よこに 走る 場に した のに、その うしろで **赤い輪が ずっと 点滅し、
+   動物が 1匹 名ざしで 囲まれた まま**だった ── ストアの スクショで
+   「気の どくに 見える」として 避けた 構図 そのもの。
+   知らせる 値うちが あるのは 死んだ しゅんかん だけ なので 2.2びょうで 引く。
+   **「やめる」で 終えた ときは はじめから 出さない。**
+   こえて いないのに「こえちゃった！」は ただの 嘘だった。 */
 function drawOverMark(){
-  if (state !== "over") return;
+  if (state !== "over" || overMarkT <= 0) return;
   let worst = overBall && balls.includes(overBall) ? overBall : null;
   if (!worst) for (const b of balls) if (!worst || b.y - b.r < worst.y - worst.r) worst = b;
   if (!worst || worst.y - worst.r >= DANGER) return;
@@ -3900,6 +4019,7 @@ function drawOverMark(){
   const bl = .55 + .45*Math.sin(time*7);
   const col = `rgba(255,60,100,${.8*bl + .2})`;
   ctx.save();
+  ctx.globalAlpha = Math.min(1, overMarkT / .6);      // さいごの 0.6びょうで すっと 引く
 
   // まるい印
   ctx.strokeStyle = col; ctx.lineWidth = 4;
@@ -4131,6 +4251,42 @@ function drawHeart(g, x, y, s){
 /* ============================================================
    ながれ
    ============================================================ */
+/* **けっか画面では、その回に 見送った子が よこに 走る（2026-09-17）。**
+   さいごに 目に 入るのが 「詰まった 盤面 ＋ もう いっぱい…」 だった。
+   ストアの スクショで「動物を 詰め込んで 気の どくに 見える」として 避けた
+   まさに その 構図が、**毎ゲームの 締めくくり**に なって いた。
+   見送りが 看板の ゲームなら、締めは その回に 送りだした子たち であるべき。
+
+   **1人も 見送れなかった 回は 何も 出さない。** 出す ものが ないのが
+   正しい（つぎは 見たい、に なる）。空の 行列を でっちあげない こと。
+   **音は 出さない。** 決着の 音と かさなる。
+   **走るのは よこ。** 上へ 浮かせない（設計判断3）。 */
+let paradeN = 0, paradeI = 0, paradeT = 0;
+function startParade(){
+  paradeN = Math.min(pops * 2, 8);     // 1かいの 見送りで 2ひき。多すぎても 8ひきで 止める
+  paradeI = 0; paradeT = .9;           // 決着の 音が 鳴りおわってから
+}
+function stopParade(){ paradeN = 0; paradeI = 0; }
+function stepParade(dt){
+  overMarkT = Math.max(0, overMarkT - dt);
+  if (paradeN <= 0 || state !== "over") return;
+  paradeT -= dt;
+  if (paradeT > 0) return;
+  if (paradeI >= paradeN){ paradeI = 0; paradeT = 2.6; return; }   // ひとめぐり したら 間を おいて また
+  // **山の 上を 走らせる。** けっか画面の 盤面は 定義上 いっぱいなので、
+  // 高さを 決めうちに すると 積みあがった子に まぎれて 見えなく なる（popFx と 同じ りくつ）。
+  let top = CH;
+  for (const b of balls) if (!b.dead && b.y - b.r < top) top = b.y - b.r;
+  const lane = Math.max(64, Math.min(DANGER + 30, top - 34));      // 64 より 上には 行かせない（見切れる）
+  const dir = (paradeI % 2 === 0) ? 1 : -1;
+  const sp = 205;
+  fx.push({ t:"run", x: dir > 0 ? -44 : CW + 44, y: lane, y0: lane, lane,
+            vx: dir * sp, s: 1.5, ph: paradeI * .9, dir,
+            life: (CW + 110) / sp, age: 0, puff: 0 });
+  paradeI++;
+  paradeT = .42;
+}
+
 function update(dt){
   time += dt;
   landCool = Math.max(0, landCool - dt);
@@ -4139,6 +4295,7 @@ function update(dt){
   stepUiShock(dt);
   shake *= Math.pow(.02, dt);
   stepFx(dt);
+  stepParade(dt);          // けっか画面の 行列（state !== "play" でも うごく）
 
   for (const b of balls){
     b.age += dt;
@@ -4408,6 +4565,8 @@ function drop(){
 function gameOver(byUser){
   state = "over";
   shake = byUser ? 0 : 9;
+  overMarkT = byUser ? 0 : 2.2;  // 「こえちゃった！」は しゅんかん だけ
+  startParade();                 // その回に 見送った子が よこに 走る
   toastEl.classList.remove("show");
   if (byUser){
     [784, 988, 1175].forEach((f, i) => setTimeout(() => beep(f, .18, "triangle", .09), i*110));
@@ -4441,6 +4600,7 @@ function gameOver(byUser){
   //  その回の 出来は 見出しと 点数と 内わけが 伝える。称号は 身分。
   const topBest = Math.max(bestEver, bestFreeEver);
   const next = nextGoal(topBest);
+  const nm = nearestMission();      // やりかけの おだい（持ちこす ので 出す）
   const modeName = spawnRows ? "まめまる 増える" : "まめまる 増えない";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
@@ -4453,6 +4613,7 @@ function gameOver(byUser){
       <p class="rank">${rankOf(topBest)}</p>
       <p>次の目標：${next}</p>
       <p class="ms-got">⭐ お題 ${stamps}個 達成</p>
+      ${nm ? `<p class="ms-left">あと ${nm.left} ／ お題は 次のゲームに続きます</p>` : ""}
       <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
         rainbowRun ? " ／ 🌈 にじいろ（記録には残りません）" : ""}</p>
       <div class="btnrow">
@@ -4894,7 +5055,10 @@ function initCharSelect(){
     // `paintCount()` の カード数と ずれる。そもそも 作らない こと。
     if (!isUsable(char)) return;
     const card = document.createElement("div");
-    card.className = "charCard" + (char.secret ? " secretCard" : "");
+    // **まだ 1回も 遊んで いない子に しるしを つける。**
+    // 18体 いるのに 1ゲームで 見えるのは 6体だけ。ここが 図鑑の 役を する。
+    card.className = "charCard" + (char.secret ? " secretCard" : "")
+                   + (playedChars.includes(char.name) ? "" : " newChar");
 
     const cvs = document.createElement("canvas");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -4936,6 +5100,16 @@ function initCharSelect(){
   while (TIERS.length) TIERS.pop();
   tiersBackup.forEach(c => TIERS.push(c));
   LAST = TIERS.length - 1;
+
+  // **まだ 遊んで いない子が 何人 いるか。** カードの しるしだけでは
+  // 「その色は 何の いみ？」で 終わる ので、ことばを ひとつ そえる。
+  {
+    const hintEl = document.getElementById("charHint");
+    const yet = ALL_CHARACTERS.filter(c => isUsable(c) && !playedChars.includes(c.name)).length;
+    if (hintEl) hintEl.textContent = yet > 0
+      ? `先に選んだ子ほど大きくなります ／ ● は まだ遊んでいない ${yet}人`
+      : "先に選んだ子ほど大きくなります";
+  }
 
   // addEventListener だと よびなおすたび 二重に つく
   selectBtn.onclick = () => {
@@ -5015,6 +5189,32 @@ function loadSelectedChars(){
   return false;
 }
 
+/* けしきの 図鑑を えがく。**タイトルは innerHTML で 作りなおされる**ので、
+   1回 書いて おわりに せず paint() から 毎回 よぶ こと。
+   **色は DOM で 組みたてる。`innerHTML` に 名前を 入れない。** */
+function paintDex(){
+  const el = document.getElementById("themeDex");
+  if (!el) return;
+  const pool = themePool();
+  const got = pool.filter(t => seenThemes.includes(t.nm)).length;
+  el.textContent = "";
+  const lb = document.createElement("span");
+  lb.className = "lb";
+  lb.textContent = `けしき ${got} / ${pool.length}`;
+  el.appendChild(lb);
+  for (const t of pool){
+    const i = document.createElement("i");
+    if (seenThemes.includes(t.nm)){
+      // 空の 色を そのまま 使う。どの けしきか 色で 思いだせる
+      i.style.background = `linear-gradient(160deg, ${t.sky[0]}, ${t.sky[2]})`;
+      i.style.boxShadow = "0 1px 0 rgba(190,170,180,.35)";
+    } else {
+      i.className = "no";
+    }
+    el.appendChild(i);
+  }
+}
+
 function bindTitleButtons(){
   // **はじめての人に えらび画面を 出さない こと。**
   // さいしょは いきなり 15枚の カードを 出して いたが、まだ 一度も 遊んで いない人には
@@ -5057,6 +5257,7 @@ function bindTitleButtons(){
         ? `最高 ${b}点 ／ ${rankOf(b)}<span> ／ ⭐${stampTotal}・${plays}回目</span>`
         : `<span>まずは ${RANK_STEPS[0]}点を目指そう</span>`;
     }
+    paintDex();
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
@@ -5104,6 +5305,7 @@ function bindTitleButtons(){
 /* タイトルへ もどる */
 function showTitle(){
   state = "title";
+  stopParade();
   balls = []; fx = []; held = null; cur = 0; chainFx = null;
   toastEl.classList.remove("show");
   overlay.classList.remove("result");
@@ -5226,6 +5428,7 @@ function start(){
   // 出しおわった 文だけ けす。**`pendingHint` は さわらない**
   //（まだ 見せて いない ヒントは、つぎに タイトルへ 来た ときに 出す）
   titleHintMsg = "";
+  stopParade();
   overlay.classList.add("hidden");
   overlay.classList.remove("result");
   
@@ -5251,6 +5454,7 @@ function start(){
   sparkleTier = rainbowRun ? 5   : SPARKLE_TIER;
 
   reset();
+  markSeen();            // けしきが 決まった あと。図鑑に 1つ 足す
 
   state = "play";
   if (!AC && soundOn){ try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
