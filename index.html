@@ -66,7 +66,17 @@
      いつも 足りて いないが（CLAUDE.md の 縦予算の はなし）、よこは あまって いる。
      ばんめんが たかさで きまって いる 画面（ふつうの スマホ）では、
      図を 足しても ばんめんは 1px も 小さく ならない。 */
-  #stage { position: relative; display: flex; align-items: flex-start; gap: 6px; }
+  /* **ばんめんと しんかの図を、上の行と 同じ はばに ひろげて 左右の はしに つける。**
+     （2026-09-19・作者の 指摘「図の みぎに すきまが 空いて 見える」）
+     ばんめんが **たてで きまる** 端末では、ばんめん＋図 が 画面より せまく なり、
+     あまりが 左右に 半分ずつ ついて **図が 宙に うかんで 見えて いた**
+     （実測 375x553：左あき 25px ／ 図の右あき 25px）。
+     `space-between` で 左右の はしに つけると、上の行と 縁が そろう。
+     **これで ばんめんは 広がらない。** 大きさは `fitCanvas` が
+     たてと はばの 小さい ほうで もう 決めて いて、この 端末では **たて**が 効いて いる
+     ── 図を まるごと 消しても 281.5px の まま（実測）。 */
+  #stage { position: relative; display: flex; align-items: flex-start; gap: 6px;
+    width: 100%; max-width: var(--rowW, 430px); justify-content: space-between; }
   canvas#ladderCv { display: block; border-radius: 14px; align-self: stretch;
     box-shadow: 0 6px 16px rgba(180,150,160,.20); }
   canvas#game {
@@ -216,8 +226,13 @@
     35%  { transform: scale(1.1); background: #fff2c2; }
     100% { transform: scale(1); background: rgba(255,255,255,.72); }
   }
+  /* **`right: 0` に 戻さない こと。**（2026-09-19）
+     #stage を 画面いっぱいに ひろげた ので、left/right 0 だと
+     **ばんめん＋しんかの図 の まんなか**に 出る ＝ ばんめんから 見ると 右に ずれる。
+     `--boardW`（ばんめんの 実はば）は fitCanvas が 入れる。 */
   #toast {
-    position: absolute; left: 0; right: 0; bottom: 7%; text-align: center;
+    position: absolute; left: 0; right: auto; width: var(--boardW, 100%);
+    bottom: 7%; text-align: center;
     pointer-events: none; opacity: 0; transform: translateY(10px);
     transition: opacity .25s, transform .25s; z-index: 4;
   }
@@ -810,6 +825,7 @@ function fitCanvas(){
      ひろげる ときだけ 効かせる ── もとの 430px を 下限に する。 */
   wrapEl.style.setProperty("--rowW",
     Math.max(430, (CW + LAD_W) * scale + 6).toFixed(1) + "px");
+  wrapEl.style.setProperty("--boardW", (CW * scale).toFixed(1) + "px");
   initLadder(scale);
 }
 window.addEventListener("resize", fitCanvas);
