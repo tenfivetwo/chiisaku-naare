@@ -741,7 +741,15 @@ const WALL_L = 14, WALL_R = CW - 14, FLOOR0 = CH - 22;
    （こあら 72px は まるごと 隠れる／うし 98px も ほぼ 隠れる）。
    これ以上 のばす なら、おだいの 文が 2行に 折れる 端末が ないかを
    もう一度 測る こと（たての 予算を 食うのは あそこ）。 */
-const SKIRT = 80;
+const SKIRT_MAX = 80;   // たてに よゆうが ある 端末で つかう ぶん
+/* **けずりきる 下限。**（2026-09-19）
+   20 に すると たての きびしい 端末（Safari の アドレスバーぶん 低い 機種）で
+   ゆかしたが 22+20 ＝ 42px しか 残らず、のぼって くる 絵が ほとんど 見えない。
+   32 なら 54px。盤面の 代償は **iPhone SE3 の Safari で 287 → 281px（−2%）**、
+   SE初代 で 222 → 217px（−2%）。この 2% で 演出が 生きるので 32 に した。
+   もっと 演出を とりたければ 48（−3〜4%）、盤面を とりたければ 20。 */
+const SKIRT_MIN = 32;
+let   SKIRT = SKIRT_MAX;   // じっさいの 値は fitCanvas が きめる（下のメモ）
 const RISE_PEEK = 9.0;    // せり上がる 何秒前から すそに 顔を 出すか
 const LIFT_SEC  = 0.70;   // ゆかを すりぬけて 定位置に つくまで
 const CEIL = 0;                      // てんじょう（これより上へは 出られない）
@@ -773,6 +781,19 @@ function fitCanvas(){
   // ばんめんの CW/CH は さわらない（＝物理も スコアも 一切 変わらない）。
   // 変わるのは 画面に うつる 大きさ だけ。
   const availW = Math.max(120, wrapEl.clientWidth - padH - 6);
+  /* **すそは「タダで 入る ぶんだけ」に する。**（2026-09-19・実機で 直した）
+     80 決め打ちに して いた ころ、**ブラウザの アドレスバーを 数えて いなかった**。
+     じっさいの iPhone SE3 の Safari は たて 553px（画面は 667px）しか なく、
+     ばんめんが **たてで きまる**側に 落ちて 262px まで 縮んで いた。
+     ここで「はばで きまる ままで いられる いちばん 大きい すそ」を えらべば、
+     たてに よゆうの ある 端末は 80、足りない 端末は けずって 盤面を 守れる。 */
+  const sW = availW / (CW + LAD_W);
+  SKIRT = Math.round(Math.min(SKIRT_MAX, Math.max(SKIRT_MIN, availH / sW - CH)));
+  // **数に ならなかった ときは いちばん 大きい ぶんに 倒す。**
+  // `Math.max(120, NaN)` は NaN を かえす ので、はばや 高さが 取れない ところ
+  // （DOM を にせもので 置きかえた 道具の 中など）では availW/availH が NaN に なり、
+  // SKIRT ごと NaN に なって **えがく 命令が ぜんぶ 落ちる**（実際そうなった）。
+  if (!isFinite(SKIRT)) SKIRT = SKIRT_MAX;
   const CH2 = CH + SKIRT;                // すその ぶんだけ 絵を 高く する
   let scale = Math.min(availW / (CW + LAD_W), availH / CH2, 1.1);
   scale = Math.max(scale, .18);          // はみ出さないよう 下げきる
@@ -782,7 +803,13 @@ function fitCanvas(){
   cv.style.height = (CH2 * scale) + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // 上下の 行を ばんめん＋しんかの図 と 同じ はばに そろえる
-  wrapEl.style.setProperty("--rowW", ((CW + LAD_W) * scale + 6).toFixed(1) + "px");
+  /* **ばんめんより せまく しては いけない。**（2026-09-19・実機で 発覚）
+     ばんめんが **たてで きまる** 端末（Safari の アドレスバーぶん 低い）では
+     ここが 画面より せまく なり、**上の行が 縮んで 「見送っ／た」と 1文字ずつ
+     折れて いた**（実機 iPhone SE3：行 303px ／ 画面 375px）。
+     ひろげる ときだけ 効かせる ── もとの 430px を 下限に する。 */
+  wrapEl.style.setProperty("--rowW",
+    Math.max(430, (CW + LAD_W) * scale + 6).toFixed(1) + "px");
   initLadder(scale);
 }
 window.addEventListener("resize", fitCanvas);
@@ -3758,7 +3785,9 @@ let skyCv = null, skyCtx = null, skyKey = "";
 let panCv = null, panCtx = null, panKey = "";
 function offCanvas(){
   const c = document.createElement("canvas");
-  c.width = CW; c.height = CH + SKIRT;   // すそも 焼く（ゆかしたは カゴの つづき）
+  // **`SKIRT_MAX` で とる こと。** SKIRT は 端末に よって 変わるが、
+  // キャンバスを 作りなおすのは 高い ので いちばん 大きい ぶんを 先に とる
+  c.width = CW; c.height = CH + SKIRT_MAX;
   return c;
 }
 function ensureSky(){
@@ -3766,7 +3795,7 @@ function ensureSky(){
   skyKey = TH.nm;
   if (!skyCv){ skyCv = offCanvas(); skyCtx = skyCv.getContext("2d"); }
   const g = skyCtx;
-  g.clearRect(0, 0, CW, CH);
+  g.clearRect(0, 0, CW, CH + SKIRT_MAX);   // すそぶんも 消す（SKIRT は 変わる）
   g.save();
   roundRect(g, 0, 0, CW, CH, 20); g.clip();
   const bg = g.createLinearGradient(0, 0, 0, CH);
@@ -3789,12 +3818,12 @@ function ensureSky(){
   g.restore();
 }
 function ensurePanel(){
-  const key = TH.nm + "|" + Math.round(floorY);
+  const key = TH.nm + "|" + Math.round(floorY) + "|" + SKIRT;   // すそが 変わったら 焼きなおす
   if (panKey === key && panCv) return;
   panKey = key;
   if (!panCv){ panCv = offCanvas(); panCtx = panCv.getContext("2d"); }
   const g = panCtx;
-  g.clearRect(0, 0, CW, CH);
+  g.clearRect(0, 0, CW, CH + SKIRT_MAX);   // すそぶんも 消す（SKIRT は 変わる）
   g.save();
   // **すそ（ゆかした）も 同じ カゴとして 焼く。**
   // ここを floorY で 切って いた ころは、ゆかの 下だけ しましまも みずたまも なく、
