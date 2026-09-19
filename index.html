@@ -40,8 +40,13 @@
   canvas { touch-action: none; }
   button { white-space: nowrap; }
   #wrap { overflow: hidden; }
+  /* **上の 行の はばを ばんめんに そろえる。**（2026-09-19）
+     430px 決め打ちだった ので、ひろい 画面（倍率が 上限 1.1 に 当たる 端末・
+     パソコン）では **ばんめんだけ 529px あって 上の 行が 430px** と
+     100px ずれて いた。`--rowW` は fitCanvas が 実測して 入れる。
+     せまい 画面では もともと 両方 おなじ はば なので 何も 変わらない。 */
   #hud {
-    width: 100%; max-width: 430px;
+    width: 100%; max-width: var(--rowW, 430px);
     display: flex; align-items: stretch; gap: 6px;
   }
   .card {
@@ -52,6 +57,7 @@
   }
   .card .lbl { font-size: 12px; letter-spacing: .06em; color: #a58e83; }
   .card .val { font-size: clamp(24px, 8vw, 34px); font-weight: 700; line-height: 1.05; color: #7a6154; }
+  .card .val.long { font-size: clamp(17px, 5.6vw, 26px); }
   .card .sub { font-size: 10px; color: #a58e83; line-height: 1.2; margin-top: -1px; }
   #hud .card { min-width: 0; }
   .card.hi .val { color: #f2789a; }
@@ -191,7 +197,7 @@
     background: #fff;
   }
   #save .msg { min-height: 15px; font-weight: 700; color: #45a35f; }
-  #missions { width: 100%; max-width: 430px; display: flex; gap: 6px; }
+  #missions { width: 100%; max-width: var(--rowW, 430px); display: flex; gap: 6px; }
   .ms {
     flex: 1; background: rgba(255,255,255,.72); border: 2px solid #fff;
     border-radius: 14px; padding: 5px 9px 6px;
@@ -223,7 +229,7 @@
     box-shadow: 0 6px 16px rgba(190,150,170,.32);
   }
   #toast .sub { display: block; font-size: 10px; color: #a58e83; font-weight: 400; margin-top: 1px; }
-  #chain { width: 100%; max-width: 430px; margin: 2px 0; }
+  #chain { width: 100%; max-width: var(--rowW, 430px); margin: 2px 0; }
   #chain canvas { width: 100%; height: auto; display: block; }
   /* ばんめんと 同じ はば(430px)で 折りかえす。
      max-width を つけないと、ひろい画面で 文が 一行に のびて
@@ -270,6 +276,7 @@
   /* せまい画面では ゲーム画面を ゆうせん */
   @media (max-height: 900px){
     .card .val { font-size: clamp(20px, 6.6vw, 28px); }
+    .card .val.long { font-size: clamp(15px, 4.8vw, 21px); }
     .card .lbl { font-size: 10px; }
     .card { padding: 3px 5px; }
     .ms .mt { font-size: 12px; height: 32px; }
@@ -277,7 +284,15 @@
     #wrap { gap: 4px; }
   }
   @media (max-height: 780px){
-    .card .sub { display: none; }
+    /* **`.card .sub { display: none }` を ここに 戻さない こと。**（2026-09-19）
+       もとは たての 予算を かせぐ ため わざと 消して いた ルールで、
+       320x568 では 「今 N人」「最高 N」が **1度も 出て いなかった**。
+       帯（#risebar）を 消して たてに 余裕が できた ので 出す ように した。
+       ゆかした（SKIRT=80）を 入れた あとでも まだ 収まる ことは 測って ある。
+       もし また たてが 足りなく なったら、ここを 消すのでは なく
+       SKIRT を 減らす こと ── 数字は 毎回 見る ものだが、
+       ゆかしたは 9秒に 1回 しか つかわない。 */
+    .card .sub { font-size: 9px; }
     #overlay .lead { font-size: 13px; line-height: 1.7; }
     #overlay h1 { font-size: 25px; }
     #titleCv { max-width: 220px; }
@@ -286,13 +301,14 @@
   @media (max-height: 700px){
     #wrap { gap: 3px; padding-top: calc(3px + env(safe-area-inset-top)); }
     .card .val { font-size: 22px; }
+    .card .val.long { font-size: 16px; }
     .card .lbl { font-size: 9px; letter-spacing: 0; }
     .card { padding: 2px 4px; border-width: 2px; }
     .card.next, .card.keep { flex: 0 0 58px; }
     .card.next canvas, .card.keep canvas { height: 26px; }
-    #risebar { padding: 2px 7px; }
-    #risebar .rl, #risebar .rv { font-size: 10px; }
-    #risebar .rp { flex: 0 0 84px; width: 84px; height: 21px; }
+    .card.lv { flex: 0 0 60px; }
+    .card.lv .lbl { font-size: 11px; }
+    .card.lv #riseStamp { font-size: 10px; }
     .ms { padding: 3px 7px 4px; border-radius: 11px; }
     .ms .mt {
       font-size: 11px; height: 15px; line-height: 15px;
@@ -308,30 +324,33 @@
   .card.keep.used { opacity: .45; }
   .card.keep.ready { border-color: #ffb0cd; background: rgba(255,244,249,.9); }
   .card .lbl.k { color: #e07a9c; }
-  #risebar {
-    width: 100%; max-width: 430px; display: flex; align-items: center; gap: 7px;
-    background: rgba(255,255,255,.72); border: 2px solid #fff; border-radius: 12px;
-    padding: 3px 9px; box-shadow: 0 2px 0 rgba(190,170,160,.25);
+  /* 預ける の あとに 入った Lv⭐＋やめる の カード */
+  .card.lv {
+    flex: 0 0 68px; padding: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  #risebar .rl { font-size: 11px; color: #a58e83; white-space: nowrap; }
-  #risebar .rp {
-    flex: 0 0 104px; width: 104px; height: 27px; display: block;
-    background: rgba(255,240,246,.85); border-radius: 8px;
+  .card.lv .lbl {
+    font-size: 12px; font-weight: 700; color: #e07a9c;
+    white-space: nowrap; line-height: 1.25;
   }
-  #risebar .rb { flex: 1; height: 8px; background: #f1dfe6; border-radius: 4px; overflow: hidden; }
-  #risebar .rb i { display: block; height: 100%; width: 0%; border-radius: 4px; background: #ffa9c6; }
-  #risebar.warn .rb i { background: #ff5f83; }
-  #risebar.warn .rl { color: #e2506f; font-weight: 700; }
-  #risebar.nofloor .rp { display: none; }
+  .card.lv #riseStamp { font-size: 11px; }
+  /* **はばを 先に とって おく こと。**「やめる」→「本当に？」で 1文字 ふえる ため、
+     押した しゅんかん ボタンが ふとって **お題の カードが ちぢんで 文が 切れた**。
+     ひろい ほうの 字に 合わせて min-width を 決め打ちする。
+     **高さは お題の カードに そろえる**（align-self: stretch）。
+     center に して いた ころ、たてに よゆうの ある 画面
+     （パソコンの ブラウザなど）で **ここだけ 背が 低く**見えた。 */
   #giveUp {
-    display: none; font-family: inherit; font-size: 10px; font-weight: 700;
-    color: #b79aa8; background: #fff; border: 2px solid #f0dfe6;
-    border-radius: 999px; padding: 3px 10px; cursor: pointer; white-space: nowrap;
+    display: none; flex: 0 0 auto; align-self: stretch;
+    min-width: 62px; box-sizing: border-box;
+    font-family: inherit; font-size: 10px; font-weight: 700;
+    color: #b79aa8; background: rgba(255,255,255,.72); border: 2px solid #fff;
+    border-radius: 14px; padding: 4px 8px; cursor: pointer; white-space: nowrap;
+    box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
-  #risebar.playing #giveUp { display: block; }
+  #giveUp:active { transform: translateY(1px); box-shadow: none; }
+  #wrap.playing #giveUp { display: block; }
   #giveUp:active { transform: translateY(1px); }
-  #risebar.nofloor { justify-content: space-between; }
-  #risebar .rv { font-size: 12px; font-weight: 700; color: #e07a9c; white-space: nowrap; }
   #sound {
     flex: 0 0 46px; background: rgba(255,255,255,.72);
     border: 2px solid #fff; border-radius: 14px;
@@ -452,22 +471,36 @@
       <div class="sub" id="curSub">今 0人</div></div>
     <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div>
       <div class="sub" id="best">最高 0</div></div>
-    <div class="card keep" id="keepCard"><div class="lbl k">預ける</div><canvas id="keepCv"></canvas></div>
+    <!-- **預ける の あった ばしょ**（2026-09-19）。
+         Lv と ⭐ と やめる は もともと 下の 帯に あったが、帯ごと 消した。
+         やめる も 同じ 帯に いた ので ここへ 移す：320px では
+         上の段に 6つ 目を 置く すきまが ない（2つの 大きな カードが
+         26px まで つぶれる。実測）ので、1枚の カードに まとめる。 -->
+    <div class="card lv" id="lvCard">
+      <!-- **Lv と ⭐ は たてに 2行。1行に しない こと。**（2026-09-19）
+           `Lv.1 ⭐0` の 1行に して いた ころ、**どちらかが 2桁に なると
+           カード（中身 56px）から はみ出して いた**（実測：2桁で 61〜68px、
+           両方 2桁でも 同じ、3桁で 83px）。Lv は 30秒で 1 上がる ので
+           5分の ゲームで 2桁に とどく ── まれな 話では ない。
+           カードは たてが 空いて いる ので、そちらを つかう。 -->
+      <div class="lbl" id="riseInfo">Lv.1</div>
+      <div class="lbl" id="riseStamp">⭐0</div>
+    </div>
     <div class="card next"><div class="lbl">次</div><canvas id="nextCv"></canvas></div>
     <button id="sound" title="音">🔊</button>
   </div>
 
-  <div id="risebar">
-    <span class="rl">予告 ⬆</span>
-    <canvas id="riseCv" class="rp"></canvas>
-    <div class="rb"><i id="riseFill"></i></div>
-    <span class="rv" id="riseInfo">Lv.1 ⭐0</span>
-    <button id="giveUp">やめる</button>
-  </div>
-
+  <!-- **やめる は おだいの 行の みぎはし。**（2026-09-19）
+       Lv⭐ の カードに 入れた ら「そこに あるのは 違和感」（作者）。
+       数字を 読む ところに 操作が まざるのが 理由。かと いって
+       **ばんめんの 下に 1行 足すのは だめ**で、実測で たての よゆうが
+       いちばん きびしい 端末（320x568）で +101px → **+49px** に 減り、
+       せっかく ひろげた ゆかした（80px）が 入らなく なる。
+       ここなら **たてを 1px も 使わない**。位置も 前の 帯の みぎはしと ほぼ 同じ。 -->
   <div id="missions">
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
+    <button id="giveUp">やめる</button>
   </div>
 
   <div id="stage">
@@ -536,6 +569,7 @@
       <p class="msg" id="saveMsg"></p>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -691,6 +725,25 @@ const LAD_W = 56;
 // 下の renderLadder の そばに 置くと「初期化前に さわった」で 落ちる（TDZ）。
 let ladCtx = null;
 const WALL_L = 14, WALL_R = CW - 14, FLOOR0 = CH - 22;
+/* **ゆかの 下に えがく ぶん（SKIRT）。**
+   `CW`/`CH` には いっさい さわらない ので 物理も スコアも 決着も 変わらない。
+   えがく 高さ だけ CH + SKIRT に なる。
+   **たての 帯（#risebar）を 消した ぶん、ここが 広げられる ように なった。**
+   7サイズで 測りなおした「盤面が 1px も 小さく ならない 上限」：
+
+     iPhone SE 初代 320x568 … +101   （いちばん きびしい）
+     Android 小     360x640 … +117
+     iPhone SE 2/3  375x667 … +122
+     390 / 414 / 430 / iPad … +140（倍率の 上限 1.1 に 当たって 頭打ち）
+
+   **80 は いちばん きびしい 端末でも 21px の よゆうが ある。**
+   ゆかの 下に つかえる 高さは 22 + 80 = **102px**
+   （こあら 72px は まるごと 隠れる／うし 98px も ほぼ 隠れる）。
+   これ以上 のばす なら、おだいの 文が 2行に 折れる 端末が ないかを
+   もう一度 測る こと（たての 予算を 食うのは あそこ）。 */
+const SKIRT = 80;
+const RISE_PEEK = 9.0;    // せり上がる 何秒前から すそに 顔を 出すか
+const LIFT_SEC  = 0.70;   // ゆかを すりぬけて 定位置に つくまで
 const CEIL = 0;                      // てんじょう（これより上へは 出られない）
 const FLOOR_MIN = 242;            // ゆかが上がりきるところ（DANGER 152 の 90px下）
 let floorY = FLOOR0;
@@ -720,13 +773,16 @@ function fitCanvas(){
   // ばんめんの CW/CH は さわらない（＝物理も スコアも 一切 変わらない）。
   // 変わるのは 画面に うつる 大きさ だけ。
   const availW = Math.max(120, wrapEl.clientWidth - padH - 6);
-  let scale = Math.min(availW / (CW + LAD_W), availH / CH, 1.1);
+  const CH2 = CH + SKIRT;                // すその ぶんだけ 絵を 高く する
+  let scale = Math.min(availW / (CW + LAD_W), availH / CH2, 1.1);
   scale = Math.max(scale, .18);          // はみ出さないよう 下げきる
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = CW * dpr; cv.height = CH * dpr;
+  cv.width = CW * dpr; cv.height = CH2 * dpr;
   cv.style.width = (CW * scale) + "px";
-  cv.style.height = (CH * scale) + "px";
+  cv.style.height = (CH2 * scale) + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 上下の 行を ばんめん＋しんかの図 と 同じ はばに そろえる
+  wrapEl.style.setProperty("--rowW", ((CW + LAD_W) * scale + 6).toFixed(1) + "px");
   initLadder(scale);
 }
 window.addEventListener("resize", fitCanvas);
@@ -745,6 +801,8 @@ let queue = [];
 let held = null;
 let aimX = CW / 2;
 let dropLock = 0;
+let liftT = 0;            // ゆかを すりぬけて いる とちゅう（秒）
+let liftH = 0;            // 積んである子が 押し上げられた 量
 let cur = 0, best = 0, drops = 0, pops = 0;
 let shake = 0;
 let time = 0;
@@ -820,6 +878,173 @@ function chainPts(n, spread){
    **`elapsed` 自体は おだい「Nびょう もちこたえる」で つかう ので のこす。** */
 function scoreNow(){ return popScore + chainScore + clearScore; }
 let overBall = null;                 // ラインを こえて ゲームオーバーに なった子
+/* ==========================================================
+   おためし：おひるね（時間を とめて 手で ずらす）
+   ---------------------------------------------------------
+   **これは 試作。index.html には 入れて いない。**
+   見送り OHIRUNE_EVERY 回ごとに 時間が とまり、OHIRUNE_SEC びょうの あいだ
+   盤面の子を 指で ずらせる。おためし用に わざと 頻度を 上げて ある。
+   ========================================================== */
+const OHIRUNE_EVERY = 6;      // 見送り 何回ごとに 来るか（3では 多すぎた。作者の 見立ては 6〜8）
+const OHIRUNE_SEC   = 5;      // ずらせる 秒数
+/* **段どりを 分ける。** 「時間が ゆっくりに なる」と「目を とじる」を
+   同時に やると、どちらも 見えない（実測：作者から「順に とじるのを 見る 余裕が ない」）。
+   さきに 時間だけ 止めて、**止まった 舞台の 上で 眠る**。おきる ときも 同じ。 */
+const OH_WAIT = 1.15;   // ① まちうけ：見送りの 2匹が 走りきるまで 何も しない
+const OH_SLOW = 0.85;   // ② スローダウン：時間 1→0。目は まだ あいて いる
+const OH_DOZE = 1.25;   // ③ ねむる：時間は 止まった まま、目が 順に とじる
+const OH_WAKE = 0.95;   // ⑤ めざめ：時間は 止まった まま、目が 順に あく
+const OH_BACK = 0.55;   // ⑥ もどる：時間 0→1
+
+let ohPhase = 0;        // 0:なし 1:まちうけ 2:スロー 3:ねむる 4:おひるね 5:めざめ 6:もどる
+let ohT = 0;
+let timeAmt = 1;        // 時間の ながれ（1=ふつう 0=停止）
+let zzzAmt = 0;         // ねむり ぐあい（0=おきてる 1=ぐっすり）
+let ohClock = 0;        // 寝息・zzz を 動かす とけい（時間が 止まって いても 進む）
+let ohX = 210, ohY = 300, zzzT = 0;
+let dragB = null, dragTX = 0, dragTY = 0;
+const smooth = v => v*v*(3 - 2*v);
+
+function startOhirune(x, y){
+  if (ohPhase) return;
+  ohPhase = 1; ohT = OH_WAIT; ohX = x; ohY = y; ohClock = 0; zzzT = .3;
+}
+function sleepDelays(){
+  const far = Math.hypot(CW, CH);
+  for (const b of balls) b.sleepD = Math.min(1, Math.hypot(b.x - ohX, b.y - ohY) / (far * .5));
+  if (held) held.sleepD = 1;
+}
+function stepOhirune(dt){
+  if (!ohPhase) return;
+  if (state !== "play"){ ohPhase = 0; timeAmt = 1; zzzAmt = 0; dragB = null; return; }
+  ohT -= dt;
+  if (ohPhase >= 3 && ohPhase <= 5) ohClock += dt;     // 眠って いる あいだも 寝息は 動く
+
+  if (ohPhase === 1){
+    if (ohT <= 0){
+      ohPhase = 2; ohT = OH_SLOW; sleepDelays();
+      // **下がる音。** 眠りは 下りていく（上がる音で いいのか 一度 考える、の きまり）
+      beep(784, .26, "sine", .07, .80);
+      setTimeout(() => beep(587, .30, "sine", .06, .80), 320);
+      // **笑いを 消す。** 笑って いると `drawCreature` が とじ目の 分岐に 入らない
+      for (const b of balls){ b.smileT = 0; b.smileNext = 99; b.blink = 99; }
+      if (held){ held.smileT = 0; held.smileNext = 99; held.blink = 99; }
+    }
+  } else if (ohPhase === 2){
+    timeAmt = 1 - smooth(1 - Math.max(0, ohT / OH_SLOW));
+    if (ohT <= 0){
+      ohPhase = 3; ohT = OH_DOZE; timeAmt = 0;
+      // 時間が 止まる 前に、すりぬけの ずらしは 消しきって おく（上のメモ）
+      if (liftT > 0){ liftT = 0; for (const b of balls) b.lift = 0; }
+      setTimeout(() => beep(440, .5, "sine", .05, .88), 120);
+    }
+  } else if (ohPhase === 3){
+    zzzAmt = smooth(1 - Math.max(0, ohT / OH_DOZE));
+    if (ohT <= 0){ ohPhase = 4; ohT = OHIRUNE_SEC; zzzAmt = 1; }
+  } else if (ohPhase === 4){
+    zzzAmt = 1;
+    if (ohT <= 0){
+      ohPhase = 5; ohT = OH_WAKE; dragB = null;
+      beep(523, .14, "sine", .06, 1.10);
+      setTimeout(() => beep(784, .20, "sine", .06, 1.06), 150);
+    }
+  } else if (ohPhase === 5){
+    zzzAmt = smooth(Math.max(0, ohT / OH_WAKE));
+    if (ohT <= 0){
+      ohPhase = 6; ohT = OH_BACK; zzzAmt = 0;
+      // おはよう。おきてから 笑う（眠って いる あいだに 笑わせない）
+      for (const b of balls){ b.smileNext = rnd(.05, .45); b.blink = rnd(1.2, 4); }
+      if (held){ held.smileNext = .2; held.blink = rnd(1.2, 4); }
+    }
+  } else {
+    timeAmt = 1 - smooth(Math.max(0, ohT / OH_BACK));
+    if (ohT <= 0){ ohPhase = 0; timeAmt = 1; zzzAmt = 0; }
+  }
+
+  // zzz を ぽつぽつ 出す（眠って いる あいだ だけ）
+  if (ohPhase >= 3 && ohPhase <= 5 && zzzAmt > .35){
+    zzzT -= dt;
+    if (zzzT <= 0){
+      zzzT = .52;
+      const cand = balls.filter(b => !b.dead && eyeShut(b) > .5);
+      if (cand.length){
+        const b = pick(cand);
+        fx.push({ t:"zz", x: b.x + b.r*.55, y: b.y - b.r*.75,
+                  vx: rnd(8, 18), vy: -rnd(16, 26), s: rnd(.8, 1.25),
+                  life: 1.5, age: 0 });
+      }
+    }
+  }
+}
+/* その子が どれだけ 眠って いるか（0=ぱっちり 1=ぐっすり）。
+   **見送った ばしょから さざ波のように 広がる。** おきる ときは 逆から。 */
+function eyeShut(b){
+  if (!ohPhase || zzzAmt <= 0) return 0;
+  if (b === dragB) return 0;
+  const d = (ohPhase === 5) ? (1 - (b.sleepD || 0)) : (b.sleepD || 0);
+  return Math.max(0, Math.min(1, (zzzAmt - d * .55) / .45));
+}
+/* **ねむそう ＝ あくび。**（2026-09-18・作者の 判断）
+   まぶただけ 下ろす「うとうと」は 実寸（ねこ26px・ひよこ22px）で
+   ふつうの 顔と 1px しか ちがわず、読めなかった。口を あける ほうは
+   説明が いらない。**② スロー の あたまから ③ ねむる の あいだ**を
+   1本の ものさしに して、`sleepD`（見送った ばしょからの とおさ）の 順に
+   ぱか→大きく→とじる。**おきる ときは あくびを しない**
+   （おきぎわの あくびは「まだ 眠い」に 読める） */
+function yawnOf(b){
+  if (ohPhase < 2 || ohPhase > 3) return 0;
+  if (b === dragB) return 0;
+  const span = OH_SLOW + OH_DOZE;
+  const t = (ohPhase === 2) ? (OH_SLOW - ohT) : (OH_SLOW + OH_DOZE - ohT);
+  const u = (t / span - (b.sleepD || 0) * .30) / .55;
+  if (u <= 0 || u >= 1) return 0;
+  return Math.sin(u * Math.PI);
+}
+/* あくびの まぶた。**目が じゅうぶん つぶれてから 下ろす こと。**
+   大きい目の 上に 線を 乗せると、眠気では なく **不機嫌（ジト目）**に 読める
+   （見本を 出して 実際に そう 言われた）。だから yw では なく
+   「いまの 目の たかさ」から 出す。 */
+function drowsyOf(eye){
+  return Math.max(0, Math.min(1, (.55 - eye) / (.55 - .18))) * .95;
+}
+function eyeAmt(b){
+  const z = eyeShut(b), y = yawnOf(b);
+  const base = z > 0 ? 1 - z * .94 : blinkAmt(b);
+  return y > 0 ? Math.min(base, 1 - y * .82) : base;
+}
+/* 寝息。**完全に 静止させない こと。** 止まって いるだけだと
+   「一時停止」に 見えて、眠って いるように 読めない（作者の 指摘）。 */
+function breathOf(b){
+  const z = eyeShut(b);
+  if (z <= 0) return 1;
+  return 1 + .026 * z * Math.sin(ohClock * 1.9 + (b.phase || 0) * 2.3);
+}
+function stepFreeze(dt){
+  // **重力を 切って ソルバーだけ まわす。** こうしないと 手で 重ねた ところが
+  // 時間を もどした しゅんかんに はじけ飛ぶ（めりこみ解消の はじき飛ばし）。
+  const gs = gravity;
+  gravity = 0;
+  for (const b of balls){ b.vx *= .35; b.vy *= .35; }
+  step(dt);
+  gravity = gs;
+  if (dragB && dragB.dead) dragB = null;
+  if (dragB){
+    dragB.x = Math.max(WALL_L + dragB.r, Math.min(WALL_R - dragB.r, dragTX));
+    dragB.y = Math.max(CEIL + dragB.r,  Math.min(floorY - dragB.r, dragTY));
+    dragB.px = dragB.x; dragB.py = dragB.y; dragB.vx = 0; dragB.vy = 0;
+  }
+  chain = 0; chainT = 0;   // 5びょうぶんが 1れんさに ならないように
+}
+function grabAt(x, y){
+  let best = null, bd = 1e9;
+  for (const b of balls){
+    if (b.dead || b.merging) continue;
+    const d = Math.hypot(b.x - x, b.y - y);
+    if (d < b.r + 10 && d < bd){ bd = d; best = b; }
+  }
+  return best;
+}
+
 // 「こえちゃった！」の 赤い印の のこり時間。**宣言は ここ**（reset() より 上）。
 // drawOverMark の そばに 置くと 起動時に 「初期化前に さわった」で 落ちる（ladCtx と 同じ わな）
 let overMarkT = 0;
@@ -887,6 +1112,31 @@ function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_S
    まったく 効かなく なる（ρ +0.12 → −0.03）。
    ここは かけ算で 持つ こと。段ごとの 数字（22 / 1.8）を 直に 書きかえると、
    もとが どれだけ だったか 分からなく なる。 */
+/* **1.5 に もどした（2026-09-18・1000ゲーム 測って 決めた）。**
+   作者の 希望で いちど 2.25（Lv1 49.5秒）に したが、
+   ふえる・各200ゲームで 測ると **1.5 だけが 明らかに よかった**：
+
+     ×1.5   ρ(精度, 1手あたり点) **+0.22**   決着 200/200   中央 98秒
+     ×1.8                        +0.05                     90秒
+     ×2.0                        +0.07                    105秒
+     ×2.25                       +0.11                    101秒
+     ×2.25＋おひるね             +0.12                    121秒
+
+   **1.8 / 2.0 / 2.25 の あいだに 順番は つかない。**
+   どこまで のばすか の 問題では なく、**のばすか どうか** の 問題。
+   精度ごとの 1手あたり点の 階段を 見ると はっきり する：
+     ×1.5  0.229 → .254 → .292 → **.346** → .314（登る）
+     ×1.8  0.249 → .263 → .281 → .274 → .291（まっ平ら）
+     ×2.25 0.174 → .287 → .278 → .315 → **.263**（いちばん 上手い 端が 下がる）
+
+   **おひるねを 入れても もどらない**（0.11 → 0.12）。ただし 測定AIは
+   おひるね中に 盤面を 組み替えられない（止まって 待つだけ）ので、
+   この 0.12 は **床**で あって 天井では ない。
+
+   **ばらつきの 訂正：** ×2.0 は 前回 −0.03、今回 +0.07。
+   CLAUDE.md の「ρ の ふれは ±0.05」は この 指標には 甘く、**0.10 ほど ふれる**。
+   だから「1.5 と それ以外」の 差（0.10〜0.17）は 読んで よいが、
+   1.8 / 2.0 / 2.25 の 順番は 読んでは いけない。 */
 const RISE_MUL = 1.5;
 function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8) * RISE_MUL; }
 /* **ゆかは 時計だけで 上げる。落とした回数を 混ぜない。**
@@ -1152,10 +1402,19 @@ function riseRow(){
   floorY = Math.max(FLOOR_MIN, floorY - RISE_STEP);
 
   if (spawnRows) for (const b of balls){ b.y -= h; b.py -= h; }
+  /* **ここから 下は えがき方 だけの はなし。**
+     ボールの y は 上で もう 確定して いる（＝物理・スコア・決着は 前と 同じ）。
+     `liftH` / `b.lift` は 「さっきまで いた ばしょ」で、0.55秒 かけて 0 に なる。
+     これが ないと **盤面の子 ぜんぶが 1フレームで h（72〜128px）飛ぶ** ので
+     「ポンっと 出た」に 見える（作者の 指摘）。 */
+  if (spawnRows){ liftH = h; liftT = LIFT_SEC; }
   if (spawnRows) for (const o of row){
     const nb = newBall(o.t, off + o.x, floorY - TIERS[o.t].r);
     nb.age = 1.2;
     nb.sqv = -0.4;
+    // すその よこく（`drawUnderFloor`）が 止まって いた ばしょ＝ゆかの すぐ下から つづける。
+    // 自分の 直径ぶん 上がれば 定位置。**ここを 2r から 変えると よこくと 絵が とぶ。**
+    nb.lift = TIERS[o.t].r * 2;
     balls.push(nb);
   }
   for (const b of balls)
@@ -1186,14 +1445,15 @@ function riseRow(){
 function reset(){
   balls = []; fx = []; queue = [];
   cur = 0; drops = 0; pops = 0; overTimer = 0; dropLock = 0; shake = 0;
+  liftT = 0; liftH = 0;
   elapsed = 0; level = 1; rises = 0;
   chain = 0; chainT = 0; chainBest = 0; chainFx = null; riseBonusUsed = 0;
   overBall = null; riseGlow = 0; dangerBall = null; clearedNow = false; overMarkT = 0;
+  ohPhase = 0; timeAmt = 1; zzzAmt = 0; dragB = null;
   overCount = OVER_GRACE; safeT = 0; tickSec = -1;
   levelAdj = 0; lvBackCool = 0; lvBackLeft = LV_BACK_MAX;
   nextRow = makeRow();
   keepTier = -1; keepUsed = false;
-  keepCard.classList.remove("used", "ready");
   floorY = FLOOR0;
   runBest = 0; popScore = 0; chainScore = 0; clearScore = 0; clears = 0; clearFx = null;
   best = bestRef();
@@ -1239,99 +1499,34 @@ function drawNext(){
 /* ============================================================
    あずける（1ぴきだけ キープして あとで つかう）
    ============================================================ */
-const keepCv = document.getElementById("keepCv");
-const kctx = keepCv.getContext("2d");
-const keepCard = document.getElementById("keepCard");
-(function initKeep(){
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  keepCv.width = NW*dpr; keepCv.height = NH*dpr;
-  kctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-})();
-function drawKeep(){
-  kctx.clearRect(0, 0, NW, NH);
-  if (keepTier < 0){
-    kctx.save();
-    kctx.strokeStyle = "#e8ccd8"; kctx.lineWidth = 2;
-    kctx.setLineDash([4,4]);
-    kctx.beginPath(); kctx.arc(NW/2, NH/2, 11, 0, 7); kctx.stroke();
-    kctx.restore();
-    return;
-  }
-  kctx.save();
-  kctx.translate(NW/2, NH/2 + 2);
-  drawCreature(kctx, keepTier, 14, time*.6, 1, 0, 0, uiSurp(), 2);
-  kctx.restore();
-}
-function doKeep(){
-  if (state !== "play" || !held || keepUsed) {
-    if (state === "play" && keepUsed) beep(200, .07, "square", .05);
-    return;
-  }
-  const cur = held.tier;
-  if (keepTier < 0){
-    keepTier = cur;
-    const nt = queue.shift();
-    held = newBall(nt, clampX(aimX, TIERS[nt].r), HOLD_Y);
-    refillQueue();
-  } else {
-    const t = keepTier;
-    keepTier = cur;
-    held = newBall(t, clampX(aimX, TIERS[t].r), HOLD_Y);
-  }
-  keepUsed = true;
-  keepCard.classList.add("used");
-  keepCard.classList.remove("ready");
-  makeSmile(held, 1.1);
-  for (let i = 0; i < 8; i++)
-    fx.push({ t:"st", x: held.x, y: HOLD_Y, vx: rnd(-180,180), vy: rnd(-220,-40),
-              rot: rnd(0,6.3), rotv: rnd(-9,9), s: rnd(4,9), life: rnd(.35,.6), age:0,
-              c: pick(["#FFD86B","#FFB7CE","#9FE0FF"]) });
-  beep(700, .09, "triangle", .09);
-  setTimeout(() => beep(940, .09, "triangle", .07), 60);
-  drawKeep();
-}
-keepCard.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); doKeep(); });
+/* **「預ける」は やめた（2026-09-19・作者の 判断）。**
+   「使わない気がする」── 実際、測定AIも 一度も 使って いない
+   （`tools/balance.js` は `drop()` しか 呼ばない）ので、
+   **この 機能の 有無は これまでの 数字に 1つも 映って いない**。
+   測って 決められる たぐいの ものでは なく、作者の 判断で よい。
+   もどす ときは HTML の `.card.keep` と、index.html の この かたまりを 戻す。
+   `keepTier` / `keepUsed` は ほかから 参照されて いる ので 残す。 */
+function drawKeep(){}
+function doKeep(){}
 
 /* せりあがりの よこく（何が下から くるか） */
-const riseCv = document.getElementById("riseCv");
-const rctx = riseCv.getContext("2d");
-const RW = 104, RH = 27;
-(function initRisePv(){
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  riseCv.width = RW*dpr; riseCv.height = RH*dpr;
-  rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-})();
-function drawRisePreview(){
-  rctx.clearRect(0, 0, RW, RH);
-  if (!nextRow || !nextRow.items.length) return;
-  const pad = 4;
-  const sc = Math.min(.28, (RW - pad*2) / Math.max(1, nextRow.w));
-  const base = RH - 3;
-  // じめん
-  rctx.fillStyle = "#ffd2e4";
-  rctx.fillRect(0, base, RW, RH - base);
-  const total = nextRow.w * sc;
-  const left = (RW - total) / 2;
-  for (const o of nextRow.items){
-    const r = TIERS[o.t].r * sc;
-    rctx.save();
-    rctx.translate(left + o.x * sc, base - r);
-    drawCreature(rctx, o.t, r, o.t * 1.7, 1, 0, 0, uiSurp(), 2);
-    rctx.restore();
-  }
-}
-
+/* 予告の 見本（小さい キャンバス）も やめた。ゆかの 下の 絵が 代わりを する。 */
+function drawRisePreview(){}
 const riseLabel = document.querySelector("#risebar .rl");
 const riseFill = document.getElementById("riseFill");
 const riseInfo = document.getElementById("riseInfo");
-const riseBar  = document.getElementById("risebar");
+const riseStamp = document.getElementById("riseStamp");
+/* 帯（#risebar）は 消した。`playing` / `warn` / `nofloor` の 付け先を
+   HUD に 移すだけで、下の updateRiseBar は そのまま 動く。 */
+const riseBar  = document.getElementById("wrap");
 function updateRiseBar(){
   riseBar.classList.toggle("nofloor", !spawnRows);   // よこくの え を 出すか
   riseBar.classList.toggle("playing", state === "play");
   if (riseLabel) riseLabel.textContent = spawnRows ? "予告 ⬆" : "床 ⬆";
   const p = state === "play" ? Math.max(0, Math.min(1, 1 - riseT/riseSpan)) : 0;
-  riseFill.style.width = (p*100).toFixed(0) + "%";
-  riseInfo.textContent = "Lv." + level + " \u2b50" + stamps;
+  if (riseFill) riseFill.style.width = (p*100).toFixed(0) + "%";   // バーは 消した
+  riseInfo.textContent = "Lv." + level;
+  if (riseStamp) riseStamp.textContent = "\u2b50" + stamps;
   riseBar.classList.toggle("warn", state === "play" && riseT < 3);
 }
 
@@ -1343,6 +1538,12 @@ function updateHUD(){
   if (elCurSub) elCurSub.textContent = "今 " + cur + "人";
   elScore.textContent = scoreNow();
   elBest.textContent = "最高 " + Math.max(best, bestRef());
+  /* **けたが ふえたら 字を 小さく する。**（2026-09-19）
+     320x568 の カードは 中身 37px しか なく、4けた（9999）は 49px で はみ出す。
+     ふつうに 遊んで 4けたには ならない（実測の 最高は 308）が、
+     **きろくの コードは 0〜999999 まで 通る**ので 人から もらった コードで 起きる。 */
+  elCur.classList.toggle("long", elCur.textContent.length >= 4);
+  elScore.classList.toggle("long", elScore.textContent.length >= 4);
   if (elDrops) elDrops.textContent = drops;
 }
 
@@ -1416,6 +1617,11 @@ function buildGrid(){
 }
 
 function step(dt){
+  // **dt が 0 に かぎりなく 近い ときは 何も しない こと。**
+  // 下の `const inv = 1/h` が 発散して、速度が Infinity → NaN に なる。
+  // おひるねで 時間の ながれを 0 に 落とした しゅんかん、これで
+  // **盤面の 玉が 12個 まとめて NaN に なった**（2026-09-18 に 実測）。
+  if (!(dt > 1e-5)) return;
   const h = dt / SUB;
   for (let s = 0; s < SUB; s++){
     for (const b of balls){
@@ -1677,6 +1883,9 @@ function doMerge(a, b){
   if (t === LAST){
     // いちばん小さい子どうし → なかよく かけていく
     pops++;
+    // **おひるね中の 見送りで 入れなおさない こと。** 手で くっつけて 見送りが 起きると
+    // タイマーが 5びょうに もどり、**永久に 時間が 動かない**状態が 作れて しまう。
+    if (pops % OHIRUNE_EVERY === 0) startOhirune(mx, my);   // おためし：おひるね
     // **みおくりは 3点（2026-09-14 に 2点から 上げた）。**
     // じかん点を 消したら ρ(精度,スコア) が 0.31 → **0.23** に 落ちた。
     // じかん点は「放置の 抜け道」であると 同時に「長く 生きのびた＝上手い」の
@@ -1878,6 +2087,7 @@ function stepFx(dt){
     if (f.t === "h"){ f.y += f.vy*dt; }
     if (f.t === "st"){ f.vy += 480*dt; f.x += f.vx*dt; f.y += f.vy*dt; f.rot += f.rotv*dt; }
     if (f.t === "txt"){ f.y += f.vy*dt; f.vy *= 0.94; }
+    if (f.t === "zz"){ f.x += f.vx*dt; f.y += f.vy*dt; f.vy *= .992; }
     if (f.t === "run"){
       f.x += f.vx*dt;
       // さいしょの 0.28びょうで 山から とび出して、はしる高さへ
@@ -2257,7 +2467,10 @@ function drawShock2(g, r, a, phase){
   g.restore();
 }
 
-function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
+function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk, zz, dw, yw){
+  zz = zz || 0;                 // ねむり ぐあい（0..1）
+  dw = dw || 0;                 // ねむそう（0..1）まぶたが 下りてくる
+  yw = yw || 0;                 // あくび（0..1）
   const T = TIERS[tier];
   const MR = mouthRule(T);      // くち・はなの きまり（唯一の 出どころ。上の 関数を 見ること）
   sm = sm || 0;
@@ -3119,7 +3332,17 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
       g.stroke();
     } else if (!happy && blinkAmt < .18){
       g.strokeStyle = lidColor(s2); g.lineWidth = Math.max(1, r*.055);
-      g.beginPath(); g.arc(ex, eyeY + r*.02, r*.12, Math.PI*1.12, Math.PI*1.88); g.stroke();
+      g.beginPath();
+      if (zz > .35){
+        // **ねむり目。** まばたきの `⌒`（上に ふくらむ 弧）は、この ゲームの
+        // **「わらい」の 形そのもの**で、眠って いるのに 笑って 固まって 見える
+        // （作者の 指摘。2026-09-18）。ねむり は **ゆるく たれた ⌣** に する。
+        g.moveTo(ex - r*.135, eyeY - r*.012);
+        g.quadraticCurveTo(ex, eyeY + r*.085, ex + r*.135, eyeY - r*.012);
+      } else {
+        g.arc(ex, eyeY + r*.02, r*.12, Math.PI*1.12, Math.PI*1.88);
+      }
+      g.stroke();
     } else if (shock && kind === 2){
       // せり上がり：まんまるの しろめ＋てんてん（上を見てる）
       g.fillStyle = "#FFFFFF";
@@ -3155,6 +3378,20 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
         g.beginPath();
         g.ellipse(ex + r*.042*k, eyeY + r*.055*k, r*.026*k, r*.03*k, 0, 0, 7); g.fill();
       }
+    }
+    // ねむそう：**上から まぶたが 下りてくる**。目の たかさは 呼ぶ側で 縮める
+    if (dw > .05 && !happy && !shock){
+      g.strokeStyle = lidColor(s2);
+      g.lineWidth = Math.max(1, r*.052);
+      g.lineCap = "round";
+      // **まぶたを 目の 上に うっすら 乗せない こと。** 大きな目の 上に 線が 乗ると
+      // 眠気では なく **不機嫌（ジト目）**に 読める（実測で ふんだ）。
+      // 呼ぶ側で 目の たかさを しっかり 縮めた うえで、まぶたは 目の 中ほどまで 下ろす。
+      const ly = eyeY - r*.075 + r*.115 * dw;
+      g.beginPath();
+      g.moveTo(ex - r*.15, ly - r*.025);
+      g.quadraticCurveTo(ex, ly + r*.06, ex + r*.15, ly - r*.025);
+      g.stroke();
     }
   }
 
@@ -3249,7 +3486,59 @@ function drawCreature(g, tier, r, phase, blinkAmt, sq, sm, su, sk){
   }
 
   // くち／くちばし
-  if (T.face === "chick"){
+  if (yw > .02){
+    // **あくび。** ここだけ 口を あける。ぞうは 口を えがかない（mouthRule）
+    if (T.face === "chick" || T.beakLong){
+      // くちばしを 上下に ひらく（まるい 穴に すると くちばしに 見えない）
+      // **あくびの くちばしは よこにも ひろげる。** はば .15r の まま 上下に ひらくと
+      // ほそながい オレンジの かたまりに 見えて、ひらいて いる ことが 読めない
+      // **くちばしは 下あごが 下がる。上へは ひらかない。**
+      // 上に ひらくと ねもと(.20r)と 目(-.02r)の あいだ .22r を こえて、
+      // とがった さきが まゆの ところまで のびる（実際そう なった）
+      // めじろ（beakLong）は ほそい くちばし。ひよこの はばで あけると
+      // かおの はばの 半分に なって 別の とりに なる
+      const lg = !!T.beakLong;
+      const op = r*(lg ? .26 : .30)*yw;       // した あごが 下がる ぶん
+      const bw = r*(lg ? (.058 + .075*yw) : (.15 + .10*yw));   // ねもとの はば
+      const y0 = r*(lg ? .07 : .20);
+      g.fillStyle = lg ? MC : "#C2410C";      // 口の 中。よこの さきを ちょうつがいに そろえる
+      g.beginPath(); g.moveTo(-bw, y0 + op*.5); g.lineTo(0, y0);
+      g.lineTo(bw, y0 + op*.5); g.lineTo(0, y0 + op); g.closePath(); g.fill();
+      g.fillStyle = lg ? (T.beakB || "#4A423C") : "#FF9E3D";
+      g.beginPath(); g.moveTo(-bw, y0); g.lineTo(bw, y0);
+      g.lineTo(0, y0 - r*.06*yw); g.closePath(); g.fill();                 // うわ くちばし
+      g.beginPath(); g.moveTo(-bw, y0 + op); g.lineTo(bw, y0 + op);
+      g.lineTo(0, y0 + op + r*(lg ? .17 : .21)); g.closePath(); g.fill();  // した くちばし
+    } else if (!MR.noMouth){
+      const oy = (T.face === "pig" || T.face === "boar") ? r*.34
+               : ((T.face === "koala" || T.face === "cow") ? r*.38 : 0);
+      // はな（ω くちの ぶんは 出さない）
+      if (!MR.bigNose && T.face !== "cat"){
+        g.fillStyle = "#5C463C";
+        const my0 = (T.face === "dog") ? r*.24 : r*.2;
+        g.beginPath(); g.ellipse(0, my0 - r*.06, r*.07, r*.05, 0, 0, 7); g.fill();
+      } else if (T.face === "cat"){
+        g.fillStyle = "#E4728F";
+        g.beginPath();
+        g.moveTo(-r*.07, r*.1); g.lineTo(r*.07, r*.1); g.lineTo(0, r*.19);
+        g.closePath(); g.fill();
+      }
+      // **あくびの 口は 行き先を きめて そこへ 寄せる。**
+      // ふつうの ω の ばしょから すこし ふくらませる やり方だと、
+      // 大きな はなの 子（こあら・うし・ぶた）で かおの 下から はみ出す。
+      const bigN = (oy > 0);
+      const tCy = bigN ? r*.645 : r*.400;   // 目の 下 .11r 〜 かおの 下 .86r に おさめる
+      const tRx = bigN ? r*.240 : r*.290;
+      const tRy = bigN ? r*.215 : r*.290;
+      const cy0 = r*.30 + oy, mCy = cy0 + (tCy - cy0)*yw;
+      const mRx = r*.075 + (tRx - r*.075)*yw;
+      const mRy = r*.055 + (tRy - r*.055)*yw;
+      g.fillStyle = MC;
+      g.beginPath(); g.ellipse(0, mCy, mRx, mRy, 0, 0, 7); g.fill();
+      g.fillStyle = TG;                      // した は 口の 下がわに 収まる
+      g.beginPath(); g.ellipse(0, mCy + mRy*.46, mRx*.44, mRy*.32, 0, 0, 7); g.fill();
+    }
+  } else if (T.face === "chick"){
     g.fillStyle = "#FF9E3D";
     g.beginPath();
     g.moveTo(-r*.15, r*.2); g.lineTo(r*.15, r*.2); g.lineTo(0, r*.4);
@@ -3469,7 +3758,7 @@ let skyCv = null, skyCtx = null, skyKey = "";
 let panCv = null, panCtx = null, panKey = "";
 function offCanvas(){
   const c = document.createElement("canvas");
-  c.width = CW; c.height = CH;
+  c.width = CW; c.height = CH + SKIRT;   // すそも 焼く（ゆかしたは カゴの つづき）
   return c;
 }
 function ensureSky(){
@@ -3507,14 +3796,18 @@ function ensurePanel(){
   const g = panCtx;
   g.clearRect(0, 0, CW, CH);
   g.save();
-  roundRect(g, WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18, 16); g.clip();
+  // **すそ（ゆかした）も 同じ カゴとして 焼く。**
+  // ここを floorY で 切って いた ころは、ゆかの 下だけ しましまも みずたまも なく、
+  // **盤面の 下に 灰色の かたまりが くっついて いる**ように 見えた。
+  const PB = (CH + SKIRT) - (DANGER - 12);
+  roundRect(g, WALL_L, DANGER-12, WALL_R-WALL_L, PB, 16); g.clip();
   g.fillStyle = TH.panel;
-  g.fillRect(WALL_L, DANGER-12, WALL_R-WALL_L, floorY-DANGER+18);
+  g.fillRect(WALL_L, DANGER-12, WALL_R-WALL_L, PB);
   g.fillStyle = TH.stripe;
-  for (let x = WALL_L; x < WALL_R; x += 46) g.fillRect(x, DANGER-12, 23, floorY-DANGER+18);
+  for (let x = WALL_L; x < WALL_R; x += 46) g.fillRect(x, DANGER-12, 23, PB);
   g.fillStyle = TH.dot;
   let row = 0;
-  for (let y = DANGER; y < floorY + 20; y += 30, row++)
+  for (let y = DANGER; y < CH + SKIRT; y += 30, row++)
     for (let x = WALL_L + (row % 2 ? 15 : 0); x < WALL_R; x += 30){
       g.beginPath(); g.arc(x, y, 3.2, 0, 7); g.fill();
     }
@@ -3617,7 +3910,7 @@ function draw(){
     drawTitleArt();
     if (++idleTick % 10 !== 1) return;
   }
-  ctx.clearRect(0,0,CW,CH);
+  ctx.clearRect(0,0,CW,CH+SKIRT);
   ctx.save();
   if (shake > .1){
     ctx.translate(rnd(-shake,shake), rnd(-shake,shake));
@@ -3652,6 +3945,8 @@ function draw(){
     ctx.restore();
   }
 
+  drawUnderFloor();
+
   // かべ
   ctx.save();
   ctx.lineJoin = "round"; ctx.lineCap = "round";
@@ -3660,6 +3955,17 @@ function draw(){
   ctx.moveTo(WALL_L, 118); ctx.lineTo(WALL_L, floorY+5);
   ctx.lineTo(WALL_R, floorY+5); ctx.lineTo(WALL_R, 118);
   ctx.stroke();
+  // すそ（ゆかした）まで かべを のばす。かごの 底では なく 「つづき」に 見せる
+  ctx.save();
+  ctx.globalAlpha = .55;
+  ctx.beginPath();
+  ctx.moveTo(WALL_L, floorY+5); ctx.lineTo(WALL_L, CH + SKIRT - 6);
+  ctx.quadraticCurveTo(WALL_L, CH + SKIRT - 1, WALL_L + 10, CH + SKIRT - 1);
+  ctx.lineTo(WALL_R - 10, CH + SKIRT - 1);
+  ctx.quadraticCurveTo(WALL_R, CH + SKIRT - 1, WALL_R, CH + SKIRT - 6);
+  ctx.lineTo(WALL_R, floorY+5);
+  ctx.stroke();
+  ctx.restore();
   ctx.strokeStyle = TH.wallIn; ctx.lineWidth = 3.4;
   ctx.beginPath();
   ctx.moveTo(WALL_L, 120); ctx.lineTo(WALL_L, floorY+3);
@@ -3696,6 +4002,10 @@ function draw(){
   for (const b of balls){
     if (b.dead) continue;
     ctx.save();
+    // **すりぬけの あいだ だけ 絵を ずらす。** translate で ずらすので
+    // この 下の コードは b.y を そのまま つかって よい
+    const dy = drawY(b) - b.y;
+    if (dy) ctx.translate(0, dy);
     // かげ
     ctx.globalAlpha = .1;
     ctx.fillStyle = "#7a5a66";
@@ -3744,9 +4054,15 @@ function draw(){
       ctx.beginPath(); ctx.arc(0,0, b.r+4, 0, 7); ctx.stroke();
       ctx.restore();
     }
-    drawCreature(ctx, b.tier, b.r, b.phase + time*.6, blinkAmt(b), b.sq, smileAmt(b), surpAmt(b), b.surpKind);
+    const zz = eyeShut(b);
+    if (zz > 0){ const br = breathOf(b); ctx.scale(br, br); }   // 寝息（静止させない）
+    const ea = eyeAmt(b), yw = yawnOf(b);
+    drawCreature(ctx, b.tier, b.r, b.phase + time*.6, ea, b.sq, smileAmt(b), surpAmt(b), b.surpKind,
+                 zz, yw > 0 ? drowsyOf(ea) : 0, yw);
     ctx.restore();
   }
+
+  drawUnderShade();
 
   // もっている子
   if (state === "play" && held){
@@ -3797,7 +4113,11 @@ function draw(){
     ctx.save();
     ctx.translate(held.x + nx, hy);
     if (hot){ const k = 1 + .04*Math.sin(time*22); ctx.scale(k, 2-k); }
-    drawCreature(ctx, held.tier, held.r, held.phase + time*.6, blinkAmt(held), 0, smileAmt(held), surpAmt(held), held.surpKind);
+    // **もって いる子も 一緒に 眠る。** ここだけ `blinkAmt` を 直に 見て いて、
+    // みんなが 目を とじる 中で 1人だけ ぱっちり 起きて いた
+    const hz = eyeShut(held), hea = eyeAmt(held), hyw = yawnOf(held);
+    drawCreature(ctx, held.tier, held.r, held.phase + time*.6, hea, 0, smileAmt(held), surpAmt(held), held.surpKind,
+                 hz, hyw > 0 ? drowsyOf(hea) : 0, hyw);
     ctx.restore();
   }
 
@@ -3872,6 +4192,20 @@ function draw(){
       ctx.rotate(f.dir * (.14 + Math.sin(f.age*14 + f.ph) * .12));
       drawCreature(ctx, LAST, R, f.age*3 + f.ph, 1, 0, 1, 0, 1);
       ctx.restore();
+    } else if (f.t === "zz"){
+      const k2 = Math.max(0, k);
+      ctx.globalAlpha = k2 > .75 ? (1-k2)/.25 : k2/.75;     // ふわっと 出て ふわっと 消える
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(Math.sin(f.age*2.4) * .18);
+      const sc = f.s * (.8 + .4*(1-k2));
+      ctx.font = `bold ${(15*sc).toFixed(1)}px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif`;
+      ctx.textAlign = "center";
+      ctx.lineJoin = "round"; ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,.95)";
+      ctx.strokeText("z", 0, 0);
+      ctx.fillStyle = "#8f78c4"; ctx.fillText("z", 0, 0);
+      ctx.textAlign = "start";
+      ctx.restore();
     } else if (f.t === "txt"){
       const rise = Math.min(1, f.age/.2);
       ctx.globalAlpha = Math.max(0, k > .7 ? 1 : k/.7);
@@ -3900,6 +4234,7 @@ function draw(){
   }
 
   drawOverMark();
+  drawOhirune();
   drawCountdown();
   drawChainText();
   drawClearText();
@@ -3956,6 +4291,105 @@ function drawRiseGlow(){
   ctx.fillRect(L, top + 2 + 7*a, W, 2 + 5*a);
 
   ctx.restore();
+}
+
+/* すその 絵。**かべ・クッションより 前**に よぶ こと
+   （あとに よぶと のぼって くる子が クッションの 上に のって、
+   「ゆかの 前を 通って いる」ように 見える）。 */
+function drawUnderFloor(){
+  if (state === "title") return;
+  const top = floorY, bot = CH + SKIRT;
+  // **カゴの 下じきは `ensurePanel` が すそまで 焼いて いる。** ここでは 影だけ。
+  ctx.save();
+  roundRect(ctx, WALL_L, top, WALL_R - WALL_L, bot - top, 14);
+  ctx.clip();
+  const g = ctx.createLinearGradient(0, top, 0, bot);
+  g.addColorStop(0, "rgba(96,74,88,.05)");
+  g.addColorStop(1, "rgba(96,74,88,.17)");
+  ctx.fillStyle = g;
+  ctx.fillRect(WALL_L, top, WALL_R - WALL_L, bot - top);
+
+  // のぼって くる子
+  if (state === "play" && spawnRows){
+    if (liftT > 0){
+      // riseRow が もう 本物を 作って いる。ここでは 何も しない
+      // （本物は たまの ループで、ずらして えがかれる）
+    } else if (nextRow && nextRow.items.length){
+      // **よこく。** せり上がる RISE_PEEK 秒前から すその 下ぎりぎりに 顔を 出し、
+      // 時計が 進むほど ゆかへ 近づく。**とうちゃく地点は「ゆかの すぐ下」**
+      // ＝ riseRow が `nb.lift = 2r` で つづきを 引きつぐ ばしょ。
+      /* **いつも 見えて いる こと。** 予告の 見本（小さい キャンバス）を
+         やめた ので、「つぎに 誰が 来るか」を 伝えるのは ここだけに なった。
+         まだ 遠い あいだは すその 下に **PARK ぶんだけ 頭を 出して** 停めて おき、
+         RISE_PEEK 秒前から のぼりはじめる。 */
+      {
+        const PARK = 20;
+        const left = Math.max(0, riseT);
+        const u = left >= RISE_PEEK ? 0 : 1 - left / RISE_PEEK;   // 0 → 1
+        /* **なめらか（smoothstep）に しては いけない。** あれは おわりで
+           速さが 0 に なる ので、すりぬけの しゅんかんに いきなり 加速して
+           見え、「ポンっ」が のこる。おわりに 向かって 速くする。
+           すそが 32 → 80 に なって のぼる きょりが 41 → 82px に ふえた ので、
+           u*u*u（さいごの 3秒に かたまる）から **u*u** に ゆるめた。 */
+        const e = u*u;
+        const off = nextRow.off;
+        for (const o of nextRow.items){
+          const t = TIERS[o.t], r = t.r;
+          const cyEnd = floorY + r;                // 頭が ちょうど ゆかの 線
+          const cyStart = bot + r - PARK;          // すその 下に 頭だけ 出して 待つ
+          const cy = cyStart + (cyEnd - cyStart) * e;
+          if (cy - r > bot) continue;
+          ctx.save();
+          ctx.globalAlpha = .62 + .38 * e;
+          ctx.translate(off + o.x, cy);
+          drawCreature(ctx, o.t, r, o.t * 1.3, 1, 0, 0, 0, 1);
+          ctx.restore();
+        }
+      }
+    }
+  }
+  ctx.restore();
+}
+/* ゆかより 下に はみ出して いる ものを くらくして、クッションを 描きなおす。
+   **たまを えがいた あとに よぶ こと。** これが ないと、すりぬけて いる子が
+   クッションの 上に べったり 乗って 見える。 */
+function drawUnderShade(){
+  if (state === "title") return;
+  const top = floorY, bot = CH + SKIRT;
+  ctx.save();
+  roundRect(ctx, WALL_L, top, WALL_R - WALL_L, bot - top, 14);
+  ctx.clip();
+  const g = ctx.createLinearGradient(0, top, 0, bot);
+  g.addColorStop(0, "rgba(96,74,88,.05)");
+  g.addColorStop(1, "rgba(96,74,88,.22)");
+  ctx.fillStyle = g;
+  ctx.fillRect(WALL_L, top, WALL_R - WALL_L, bot - top);
+  ctx.restore();
+  // クッションを もういちど 上に。**下に 何も いない ときは やらない**
+  // （毎フレーム 22個の 弧。電力の 予算を むだに しない）
+  if (liftT <= 0 && !(spawnRows && state === "play" && riseT < RISE_PEEK)) return;
+  const warn2 = riseT < 3 && state === "play";
+  ctx.fillStyle = warn2 ? `rgba(255,150,180,${.55+.45*Math.sin(time*14)})` : TH.cush;
+  for (let x = WALL_L + 9; x < WALL_R - 2; x += 17){
+    ctx.beginPath(); ctx.arc(x, floorY + 9, 8.5, Math.PI, 0); ctx.fill();
+  }
+}
+
+/* いま 絵を どれだけ 下に ずらすか（0=定位置）。
+   すりぬけの あいだ だけ 効く。**中の 座標は 触らない こと。** */
+function liftAmt(b){
+  if (liftT <= 0) return 0;
+  const e = liftT / LIFT_SEC;                 // 1 → 0
+  const k = e*e*(3 - 2*e);                    // なめらかに 減速して 定位置へ
+  if (b.lift) return b.lift * k;              // 下から のぼって くる子
+  return liftH * k;                           // 積んであって 押し上げられた子
+}
+/* すりぬけ中の 見た目の y。
+   **のぼって くる子 いがいは ゆかより 下に えがかない。**
+   ずらすと 一瞬 クッションに めりこんで「沈んで いる」ように 見える。 */
+function drawY(b){
+  const y = b.y + liftAmt(b);
+  return b.lift ? y : Math.min(y, floorY - b.r);
 }
 
 /* ラインを こえている あいだの カウントダウン */
@@ -4041,6 +4475,44 @@ function drawCountdown(){
    知らせる 値うちが あるのは 死んだ しゅんかん だけ なので 2.2びょうで 引く。
    **「やめる」で 終えた ときは はじめから 出さない。**
    こえて いないのに「こえちゃった！」は ただの 嘘だった。 */
+/* おためし：おひるね中の 画面 */
+function drawOhirune(){
+  if (!ohPhase) return;
+  const A = Math.max(zzzAmt, 1 - timeAmt);       // 下じきは スローダウンから すっと 入る
+  if (A <= .003) return;
+  ctx.save();
+  ctx.fillStyle = `rgba(60,48,80,${(.17*A).toFixed(3)})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // ことばは **ずらせる ときだけ** 出す。眠りに 入る あいだは 絵だけを 見せる
+  if (ohPhase >= 4){
+    const show = ohPhase === 4 ? 1 : zzzAmt;
+    ctx.globalAlpha = show;
+    const p = ohPhase === 4 ? Math.max(0, Math.min(1, ohT / OHIRUNE_SEC)) : 1;
+    const bw = CW - 80, bx = 40, by = DANGER + 30;
+    ctx.fillStyle = "rgba(255,255,255,.75)";
+    roundRect(ctx, bx, by, bw, 9, 5); ctx.fill();
+    ctx.fillStyle = "#b79bdf";
+    roundRect(ctx, bx, by, bw * p, 9, 5); ctx.fill();
+    ctx.textAlign = "center";
+    ctx.font = 'bold 20px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
+    ctx.lineJoin = "round"; ctx.lineWidth = 6; ctx.strokeStyle = "#ffffff";
+    ctx.strokeText("おひるね", CW/2, by - 14);
+    ctx.fillStyle = "#7a5ba6"; ctx.fillText("おひるね", CW/2, by - 14);
+    ctx.font = 'bold 12px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
+    ctx.lineWidth = 5;
+    ctx.strokeText("そっと うごかせるよ", CW/2, by + 28);
+    ctx.fillStyle = "#6b5470"; ctx.fillText("そっと うごかせるよ", CW/2, by + 28);
+    ctx.textAlign = "start";
+  }
+  if (dragB && !dragB.dead){
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(dragB.x, dragB.y, dragB.r + 6, 0, 7); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawOverMark(){
   if (state !== "over" || overMarkT <= 0) return;
   let worst = overBall && balls.includes(overBall) ? overBall : null;
@@ -4332,6 +4804,23 @@ function stepParade(dt){
 }
 
 function update(dt){
+  const raw = dt;
+  /* **すりぬけの 絵の ずらしは、おひるねより 前で 減らす こと。**（2026-09-19 マージ）
+     これを 下（おひるねの 早期 return より あと）に 置くと、せり上がりの
+     直後に おひるねが 始まった とき **絵が ずれた まま 凍る**。
+     おひるね中は 指で 玉を つかめる のに、つかむ 判定は 本当の y を 見るので、
+     **見えて いる ばしょと つかめる ばしょが 最大 128px ずれる**。
+     ここで 減らせば ずれは どんなに 長くても 0.7秒で 消える。 */
+  if (liftT > 0){ liftT = Math.max(0, liftT - raw); if (liftT === 0) for (const b of balls) b.lift = 0; }
+  stepOhirune(raw);                      // 段どりは 生の dt（ここだけは 止まらない）
+  // ③ねむる ④おひるね ⑤めざめ は **時間が 完全に 止まって いる**。
+  // ただし 寝息と zzz は 動かす（静止させると 一時停止に 見える）。
+  if (ohPhase >= 3 && ohPhase <= 5 && state === "play"){
+    if (ohPhase === 4) stepFreeze(raw);
+    stepFx(raw);
+    return;
+  }
+  dt = raw * timeAmt;
   time += dt;
   landCool = Math.max(0, landCool - dt);
   heartCool = Math.max(0, heartCool - dt);
@@ -4445,8 +4934,6 @@ function update(dt){
     held = newHeld(queue.shift());
     holdSpan = holdLimit(); holdT = holdSpan; tickAt = -1;
     keepUsed = false;
-    keepCard.classList.remove("used");
-    keepCard.classList.toggle("ready", keepTier >= 0);
     refillQueue();
   }
   if (held){
@@ -5575,13 +6062,25 @@ function pointerY(e){
    さわって ようすを 見ただけで おちてしまう 事故を ふせぐ */
 let downY = null, downId = null;
 const CANCEL_UP = 60;            // これ いじょう 上へ うごかして はなすと おとさない
-cv.addEventListener("pointermove", e => { aimX = pointerX(e); });
+cv.addEventListener("pointermove", e => {
+  if (ohPhase === 4){ if (dragB){ dragTX = pointerX(e); dragTY = pointerY(e); } return; }
+  aimX = pointerX(e);
+});
 cv.addEventListener("pointerdown", e => {
+  if (ohPhase >= 2){
+    if (ohPhase !== 4){ return; }
+    dragTX = pointerX(e); dragTY = pointerY(e);
+    dragB = grabAt(dragTX, dragTY);
+    if (dragB) beep(520, .05, "sine", .05, 1.15);
+    try { cv.setPointerCapture(e.pointerId); } catch(err){}
+    return;                      // **おひるね中は ぜったいに おとさない**
+  }
   aimX = pointerX(e);
   downY = pointerY(e); downId = e.pointerId;
   try { cv.setPointerCapture(e.pointerId); } catch(err){}
 });
 cv.addEventListener("pointerup", e => {
+  if (ohPhase >= 2){ dragB = null; return; }
   aimX = pointerX(e);
   const up = (downY == null) ? 0 : (downY - pointerY(e));
   // **もって いる子 そのものを タップしたら おちる こと。**
@@ -5598,7 +6097,7 @@ cv.addEventListener("pointerup", e => {
   }
   drop();
 });
-cv.addEventListener("pointercancel", () => { downY = null; downId = null; });
+cv.addEventListener("pointercancel", () => { downY = null; downId = null; dragB = null; });
 /* もじを うっている あいだ／ダイアログが 出ている あいだは ゲームに ながさない */
 function typingNow(e){
   const t = e && e.target;
@@ -5651,9 +6150,12 @@ function initLadder(scale){
   const c = document.getElementById("ladderCv");
   if (!c){ ladCtx = null; return; }
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  c.width = LAD_W * dpr; c.height = CH * dpr;
+  // **すそ（SKIRT）を 足したら ここも そろえる こと。**
+  // CH の まま だと 盤面の 下 80px だけ 図が なくて、
+  // よこに 欠けた 段差が できる（実際 そう なった）
+  c.width = LAD_W * dpr; c.height = (CH + SKIRT) * dpr;
   c.style.width = (LAD_W * scale) + "px";
-  c.style.height = (CH * scale) + "px";
+  c.style.height = ((CH + SKIRT) * scale) + "px";
   ladCtx = c.getContext("2d");
   ladCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   renderLadder();
@@ -5661,7 +6163,10 @@ function initLadder(scale){
 
 function renderLadder(){
   if (!ladCtx) return;
-  const g = ladCtx, W = LAD_W, H = CH;
+  // **SKIRT を 足したら H も そろえる こと。** キャンバスだけ 高く して
+  // 中身を CH で えがいて いた ころは、下 80px が すきとおって
+  // **図だけ 短い**ように 見えた（作者の 指摘「中途半端な 長さ」）。
+  const g = ladCtx, W = LAD_W, H = CH + SKIRT;
   g.clearRect(0, 0, W, H);
 
   // 下じき
