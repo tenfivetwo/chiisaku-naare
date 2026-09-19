@@ -208,8 +208,16 @@
   }
   #save .msg { min-height: 15px; font-weight: 700; color: #45a35f; }
   #missions { width: 100%; max-width: var(--rowW, 430px); display: flex; gap: 6px; }
+  /* **`min-width: 0` を 外さない こと。**（2026-09-19・実測で 発覚）
+     flex の 子は 既定で `min-width: auto` ＝ **中身より 小さく ならない**。
+     おだいの 文が 長い 回（「ユニコーンを 11回見送る」など）に カードが ふくらみ、
+     320px では 行から **「やめる」が 押し出されて いた**
+     （カード 115 → 142.7px、行が はみ出す）。
+     0 に すると カードは ちぢみ、文は … で 切れる ── 切れるのは
+     べつの 話（下の「おだいの 文が 入るか」）だが、**押し出しは 起きなく なる**。 */
   .ms {
-    flex: 1; background: rgba(255,255,255,.72); border: 2px solid #fff;
+    flex: 1; min-width: 0;
+    background: rgba(255,255,255,.72); border: 2px solid #fff;
     border-radius: 14px; padding: 5px 9px 6px;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
@@ -331,6 +339,19 @@
     }
     .ms .mb { height: 5px; margin-top: 2px; }
     #sound { flex: 0 0 38px; font-size: 15px; }
+  }
+
+  /* **320px の 端末では おだいを 2行に する。**（2026-09-19・実測）
+     1行＋… に して いた ころ、320x454（iPhone SE 初代 の Safari）で
+     **92とおり 中 46件が 切れて いた**。しかも 切れるのは 文の おしり ＝
+     **「見送る」「作る」「並べる」という いちばん 大事な 動詞**。
+     「ユニコーンを 11回…」では 何を するのか 分からない。
+     2行に すると 切れるのは **0件**。代償は おだいの行が 33 → 48px、
+     ばんめんが **217.7 → 208.1px（−4.4%）**。
+     **切れる ほうが 悪い**と 見て 2行に した。戻すなら この かたまりを 消すだけ。
+     375px（SE3）いじょうは 1行の まま ── そちらは 194とおり ぜんぶ 入って いる。 */
+  @media (max-width: 340px){
+    .ms .mt { white-space: normal; height: 30px; }
   }
   .card.next, .card.keep { flex: 0 0 68px; padding: 4px 4px 3px; }
   .card.next canvas, .card.keep canvas { width: 100%; height: 34px; display: block; }
@@ -4368,7 +4389,20 @@ function drawUnderFloor(){
          まだ 遠い あいだは すその 下に **PARK ぶんだけ 頭を 出して** 停めて おき、
          RISE_PEEK 秒前から のぼりはじめる。 */
       {
-        const PARK = 20;
+        /* **待って いる あいだに 出す 頭の 量は、ゆかしたの 広さの 半分。**
+           （2026-09-19・作者の 実機を 見て 直した）
+           20px 決め打ちに して いた ころ、ゆかしたが 32px しか 取れない 端末
+           （iPhone SE3 の Safari）では **画面の 上で 13px** に しか ならず、
+           **茶色と 灰色の かたまりに しか 見えて いなかった**。
+           予告の 小さい絵を やめた とき「ゆかしたで ずっと 見えて いるから
+           誰が 来るか 分かる」と 言った のに、その 端末では 成り立って いなかった。
+           半分に すると せまい 端末でも 27px（画面で 18px）出て、
+           いちばん 小さい こあら（たて72px）なら 4わり 見える。
+           上限 40px は のぼる 動きを 残す ため ── ゆかしたが 102px の 端末で
+           のぼる きょりは 62px（もとは 82px）。
+           **のぼり切る ばしょ（`cyEnd`）は 変えない こと。**
+           そこは riseRow が `nb.lift = 2r` で 引きつぐ 待ち合わせ場所。 */
+        const PARK = Math.min((bot - floorY) * 0.5, 40);
         const left = Math.max(0, riseT);
         const u = left >= RISE_PEEK ? 0 : 1 - left / RISE_PEEK;   // 0 → 1
         /* **なめらか（smoothstep）に しては いけない。** あれは おわりで
