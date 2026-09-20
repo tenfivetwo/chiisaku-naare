@@ -94,7 +94,9 @@
      **ここでも ばんめんは 広がらない**（大きさは fitCanvas が もう 決めて いる）。 */
   #stage { position: relative; display: flex; align-items: flex-start; gap: 6px;
     width: 100%; max-width: var(--rowW, 430px); justify-content: flex-start; }
-  canvas#ladderCv { display: block; border-radius: 14px; align-self: stretch;
+  /* 進化の図の たて1列（やめる ＋ 図）。はばは どちらも `--ladW`。 */
+  #ladCol { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
+  canvas#ladderCv { display: block; border-radius: 14px;
     box-shadow: 0 6px 16px rgba(180,150,160,.20); }
   canvas#game {
     display: block; border-radius: 20px;
@@ -391,7 +393,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ms .mb { height: 5px; margin-top: 2px; }
-    #sound { font-size: 14px; }
+    #sound { font-size: 14px; border-radius: 11px; }
   }
 
   /* **320px の 端末では おだいを 2行に する。**（2026-09-19・実測）
@@ -435,49 +437,37 @@
     .card.lv #riseStamp { font-size: 10px; }
     #chainCard .lbl { font-size: 10px; }
   }
-  /* **はばを 先に とって おく こと。**「やめる」→「本当に？」で 1文字 ふえる ため、
-     押した しゅんかん ボタンが ふとって **お題の カードが ちぢんで 文が 切れた**。
-     ひろい ほうの 字に 合わせて min-width を 決め打ちする。
-     **高さは お題の カードに そろえる**（align-self: stretch）。
-     center に して いた ころ、たてに よゆうの ある 画面
-     （パソコンの ブラウザなど）で **ここだけ 背が 低く**見えた。 */
-  /* おだいの 行の みぎはしに たて2段（スピーカー／やめる）。
-     おだいの カードと おなじ 高さに のばして、その 中で 半分ずつ わける。 */
-  #rightCol {
-    flex: 0 0 auto; align-self: stretch; display: flex; flex-direction: column;
-    gap: 4px; min-width: 62px;
-    /* **48px。** おだいの 行は もともと 33px しか なく、2つ 積むと
-       13px と 17px に なって **指では 押せない**。かと いって のばすと
-       たての よゆうが いちばん ない 端末（375x553）は ばんめんを 削る。実測：
-
-       | ここの 高さ | 375x553 の ばんめん | 🔊 ／ やめる |
-       |---|---|---|
-       | なりゆき(33) | 281.5 | 13 ／ 17 |
-       | 44 | 274.4（−2.5%） | 18 ／ 22 |
-       | **48** | **271.8（−3.4%）** | **20 ／ 24** |
-       | 56 | 266.7（−5.3%） | 24 ／ 28 |
-       | 92（44px×2） | **はみ出す**（HUD の 上端が −10px） | 42 ／ 42 |
-
-       **他の 端末（320・360・PWA）では 1px も 削らない**（たてに よゆうが ある）。
-       44px には とどかないが、この 2つは **めったに 押さない**うえ、
-       やめるは「本当に？」の 2段がまえ なので 押しまちがいは 取りかえせる。 */
-    min-height: 48px;
-  }
-  #rightCol > * { flex: 1 1 0; min-height: 0; }
+  /* **やめる は 進化の図の 上。**（2026-09-20・作者）
+     おだいの 行に たて2段で 積んで いた ころは 13〜24px に しか ならず
+     **指で 押せなかった**（せまい 端末では 行を のばすと ばんめんを 削る：
+     48px に のばして 375x553 の ばんめんが 281.5 → 271.8px、
+     44px×2 まで のばすと **画面から はみ出した**）。
+     図の ほうは たてに よゆうが ある ので、上を 26px（ボタン22＋すきま4）
+     詰めて そこに 置く。**ばんめんは 1px も 削らない。**
+     **`display:none` では なく `visibility`。** 消して しまうと
+     タイトル画面で 図が 26px 上に ずれて、ばんめんの 下端と そろわなく なる。 */
   #giveUp {
-    display: none; width: 100%; box-sizing: border-box;
-    font-family: inherit; font-size: 10px; font-weight: 700;
-    color: #92687c; background: rgba(255,255,255,.72); border: 2px solid #fff;  /* 2.48 → 4.52 */
-    border-radius: 12px; padding: 2px 4px; cursor: pointer; white-space: nowrap;
+    visibility: hidden;
+    width: var(--ladW, 46px); height: 22px; box-sizing: border-box;
+    font-family: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0;
+    color: #92687c; background: rgba(255,255,255,.80); border: 2px solid #fff;  /* 2.48 → 4.52 */
+    border-radius: 11px; padding: 0 1px; cursor: pointer; white-space: nowrap;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
+    display: flex; align-items: center; justify-content: center;
   }
+  /* **たしかめの 字は 3文字まで。**（2026-09-20）
+     はばを 図に そろえた ので 中は 27〜32px しか ない。
+     「本当に？」（4文字＝36px）は はみ出す ので「本当？」に した。
+     ここを 4文字に 戻す なら はばの ほうを 考えなおす こと。 */
+  #giveUp.arm { color: #b8365c; background: #fff0f4; border-color: #ffd0de; }
+  #wrap.playing #giveUp { visibility: visible; }
   #giveUp:active { transform: translateY(1px); box-shadow: none; }
-  #wrap.playing #giveUp { display: block; }
-  #giveUp:active { transform: translateY(1px); }
+  /* はばは 進化の図と おなじ（作者の 指示）。たては おだいの カードに そろえる。 */
   #sound {
-    width: 100%; background: rgba(255,255,255,.72);
-    border: 2px solid #fff; border-radius: 12px;
-    font-size: 15px; cursor: pointer; padding: 0; line-height: 1;
+    flex: 0 0 var(--ladW, 46px); align-self: stretch;
+    background: rgba(255,255,255,.72);
+    border: 2px solid #fff; border-radius: 14px;
+    font-size: 16px; cursor: pointer; padding: 0; line-height: 1;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
   #sound:active { transform: translateY(2px); box-shadow: none; }
@@ -601,6 +591,14 @@
          やめる も 同じ 帯に いた ので ここへ 移す：320px では
          上の段に 6つ 目を 置く すきまが ない（2つの 大きな カードが
          26px まで つぶれる。実測）ので、1枚の カードに まとめる。 -->
+    <!-- **その回の さいだい連鎖。**（2026-09-20・作者）
+         れんさは このゲームで いちばん 気持ちの いい ところ なのに、
+         **出た しゅんかんの 1.7秒しか 画面に なく、記録も どこにも 残って いなかった**。
+         結果画面の 内わけを 消した ので、ここが 唯一の 置き場に なる。 -->
+    <div class="card lv" id="chainCard">
+      <div class="lbl">連鎖</div>
+      <div class="lbl" id="chainMax">0</div>
+    </div>
     <div class="card lv" id="lvCard">
       <!-- **Lv と ⭐ は たてに 2行。1行に しない こと。**（2026-09-19）
            `Lv.1 ⭐0` の 1行に して いた ころ、**どちらかが 2桁に なると
@@ -610,14 +608,6 @@
            カードは たてが 空いて いる ので、そちらを つかう。 -->
       <div class="lbl" id="riseInfo">Lv.1</div>
       <div class="lbl" id="riseStamp">⭐0</div>
-    </div>
-    <!-- **その回の さいだい連鎖。**（2026-09-20・作者）
-         れんさは このゲームで いちばん 気持ちの いい ところ なのに、
-         **出た しゅんかんの 1.7秒しか 画面に なく、記録も どこにも 残って いなかった**。
-         結果画面の 内わけを 消した ので、ここが 唯一の 置き場に なる。 -->
-    <div class="card lv" id="chainCard">
-      <div class="lbl">連鎖</div>
-      <div class="lbl" id="chainMax">0</div>
     </div>
     <div class="card next"><div class="lbl">次</div><canvas id="nextCv"></canvas></div>
   </div>
@@ -636,15 +626,21 @@
          上の 行に 連鎖の カードを 足した ぶん、スピーカーが 入らなく なった。
          おだいの カードは 2行ぶんの 高さが ある ので、ここに 2つ 積める。
          **たてを 1px も 使わない**のは 前と 同じ。 -->
-    <div id="rightCol">
-      <button id="sound" title="音">🔊</button>
-      <button id="giveUp">やめる</button>
-    </div>
+    <button id="sound" title="音">🔊</button>
   </div>
 
   <div id="stage">
     <canvas id="game"></canvas>
-    <canvas id="ladderCv"></canvas>
+    <!-- **やめる は 進化の図の 上。**（2026-09-20・作者）
+         おだいの 行に 2段で 積むと 13〜24px に しか ならず 指で 押せない。
+         図の ほうは たてに よゆうが ある ので、**上を すこし 詰めて**
+         そこに 置く。はばは 図と そろえる（`--ladW`）。
+         図の キャンバスの 高さは `LAD_H` が 受けもつ ── 中身も いっしょに
+         縮むので「下だけ 欠ける」ようには ならない。 -->
+    <div id="ladCol">
+      <button id="giveUp">やめる</button>
+      <canvas id="ladderCv"></canvas>
+    </div>
     <div id="toast"><span class="in"></span></div>
     <div id="overlay">
       <h1>まめまる</h1>
@@ -858,6 +854,8 @@ const CW = 420, CH = 620;
 // みぎの しんかの図の はば（ばんめんと 同じ ものさし）。
 // ばんめんの CW/CH には いっさい さわらない ので、ゲームの 中身は 変わらない。
 const LAD_W = 56;
+const GIVEUP_CSS = 26;               // やめる(22px) ＋ すきま(4px)。画面の px
+let   LAD_H = 620;                   // 進化の図の たて（キャンバスの ものさし）
 // fitCanvas() は この すぐ下で 1回 よばれる ので、ここで 宣言して おく。
 // 下の renderLadder の そばに 置くと「初期化前に さわった」で 落ちる（TDZ）。
 let ladCtx = null;
@@ -978,6 +976,14 @@ function fitCanvas(){
   wrapEl.style.setProperty("--rowW",
     Math.max(430, (CW + LAD_W) * scale + 6).toFixed(1) + "px");
   wrapEl.style.setProperty("--boardW", (CW * scale).toFixed(1) + "px");
+  /* **「やめる」と スピーカーの はばは 進化の図と おなじ。**（2026-09-20・作者）
+     図の はばは 倍率で 変わる ので、CSS からは 変数で 見る。 */
+  wrapEl.style.setProperty("--ladW", (LAD_W * scale).toFixed(1) + "px");
+  /* **図は「やめる」の ぶんだけ 上を 詰める。**
+     `GIVEUP_CSS` は ボタンの 高さ＋すきま（画面の px）。
+     倍率で わって キャンバスの ものさしに 直す ので、
+     **どの 端末でも 図の 下端は ばんめんの 下端と そろう**。 */
+  LAD_H = Math.max(120, CH2 - GIVEUP_CSS / scale);
   initLadder(scale);
 }
 window.addEventListener("resize", fitCanvas);
@@ -1521,8 +1527,13 @@ try {
    10 の 上限で 止める ため。**どちらか 片方では 足りない**
    ── わりあいだけだと drop が ゆるく、数だけだと `chain`（3回中 あと2）が 通る。
 
-   **どの おだいかも 出す。** 「あと 3」だけでは 何が あと3 なのか 分からない
-   （おだいは 2つ あって、結果画面には どちらも 出て いない）。 */
+   **2026-09-20：数も おだい名も 出さない ことに した**（作者の 判断）。
+   「あと N で ⭐が1つ ふえる（◯◯）」まで 書いて みた けっか、
+   **結果画面で いちばん こまかい 行が いちばん 長く なって しまった**。
+   いまは `nearestMission()` は **出すか 出さないかの 判定にだけ つかう**
+   ── おしい ときだけ「お題の達成状況は 次のゲームに続きます」の 1行が 出る。
+   しきい値を のこして あるのは、**やりかけが 何も ない ときに
+   この 1行を 出さない** ため。 */
 function nearestMission(){
   let top = null;
   for (const m of missions){
@@ -5243,7 +5254,8 @@ function update(dt){
   // 「やめる」の かくにんは しばらくで もどる
   if (giveUpArm > 0){
     giveUpArm -= dt;
-    if (giveUpArm <= 0 && giveUpBtn) giveUpBtn.textContent = "やめる";
+    if (giveUpArm <= 0 && giveUpBtn){ giveUpBtn.textContent = "やめる";
+                                      giveUpBtn.classList.remove("arm"); }
   }
   hudTick += dt;
   if (hudTick > .5){                                    // じかん点が のびるので さだんに 更新
@@ -5471,8 +5483,7 @@ function gameOver(byUser){
       <p>次の目標：${next}</p>
       <p class="ms-got">⭐ お題 ${stamps}個 達成${
         chainBest >= 2 ? " ／ 最大 " + chainBest + "連鎖" : ""}</p>
-      ${nm ? `<p class="ms-left">あと ${nm.left} で ⭐が1つ ふえる（${nm.text}）<br>
-        お題は 次のゲームに続きます</p>` : ""}${
+      ${nm ? `<p class="ms-left">お題の達成状況は 次のゲームに続きます</p>` : ""}${
         rainbowRun ? '<p style="font-size:10px;color:#92687c">🌈 にじいろ（記録には残りません）</p>' : ""}
       <div class="btnrow">
         <button class="btn" id="againBtn">もう一度</button>
@@ -5619,9 +5630,11 @@ let giveUpArm = 0;
 const giveUpBtn = document.getElementById("giveUp");
 giveUpBtn.addEventListener("click", () => {
   if (state !== "play") return;
-  if (giveUpArm > 0){ giveUpArm = 0; giveUpBtn.textContent = "やめる"; gameOver(true); return; }
+  if (giveUpArm > 0){ giveUpArm = 0; giveUpBtn.textContent = "やめる";
+                      giveUpBtn.classList.remove("arm"); gameOver(true); return; }
   giveUpArm = 2.2;
-  giveUpBtn.textContent = "本当に？";
+  giveUpBtn.textContent = "本当？";        // 3文字まで（はばが 図と おなじ）
+  giveUpBtn.classList.add("arm");
   beep(420, .08, "sine", .06);
 });
 document.getElementById("copyBtn").addEventListener("click", copyCode);
@@ -6495,9 +6508,9 @@ function initLadder(scale){
   // **すそ（SKIRT）を 足したら ここも そろえる こと。**
   // CH の まま だと 盤面の 下 80px だけ 図が なくて、
   // よこに 欠けた 段差が できる（実際 そう なった）
-  c.width = LAD_W * dpr; c.height = (CH + SKIRT) * dpr;
+  c.width = LAD_W * dpr; c.height = LAD_H * dpr;
   c.style.width = (LAD_W * scale) + "px";
-  c.style.height = ((CH + SKIRT) * scale) + "px";
+  c.style.height = (LAD_H * scale) + "px";
   ladCtx = c.getContext("2d");
   ladCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   renderLadder();
@@ -6508,7 +6521,7 @@ function renderLadder(){
   // **SKIRT を 足したら H も そろえる こと。** キャンバスだけ 高く して
   // 中身を CH で えがいて いた ころは、下 80px が すきとおって
   // **図だけ 短い**ように 見えた（作者の 指摘「中途半端な 長さ」）。
-  const g = ladCtx, W = LAD_W, H = CH + SKIRT;
+  const g = ladCtx, W = LAD_W, H = LAD_H;
   g.clearRect(0, 0, W, H);
 
   // 下じき
