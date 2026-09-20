@@ -387,7 +387,15 @@
     .card { padding: 2px 4px; border-width: 2px; }
     .card.next, .card.keep { flex: 0 0 58px; }
     .card.next canvas, .card.keep canvas { height: 26px; }
-    .ms { padding: 3px 7px 4px; border-radius: 11px; }
+    /* **よこの あき 7 → 3、カード間の すきま 6 → 4。**
+       行を ばんめんに そろえた ぶん カードが 17px せまく なり、
+       いちばん 長い おだい「ユニコーンを 14回見送る」(11px で **126px**) が
+       入らなく なった。あきを 削れば **たてを 1px も 使わずに** 戻せる。
+       375x553 で カードの 中は 130px ── ここが **いちばん ぎりぎりの ところ**。
+       字を 大きく する・あきを 戻す・行を せまく する の どれかを する ときは、
+       かならず おだい 176とおりを 測りなおす こと。 */
+    .ms { padding: 3px 3px 4px; border-radius: 11px; }
+    #missions { gap: 4px; }
     .ms .mt {
       font-size: 11px; height: 15px; line-height: 15px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -968,13 +976,21 @@ function fitCanvas(){
   cv.style.height = (CH2 * scale) + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // 上下の 行を ばんめん＋しんかの図 と 同じ はばに そろえる
-  /* **ばんめんより せまく しては いけない。**（2026-09-19・実機で 発覚）
-     ばんめんが **たてで きまる** 端末（Safari の アドレスバーぶん 低い）では
-     ここが 画面より せまく なり、**上の行が 縮んで 「見送っ／た」と 1文字ずつ
-     折れて いた**（実機 iPhone SE3：行 303px ／ 画面 375px）。
-     ひろげる ときだけ 効かせる ── もとの 430px を 下限に する。 */
-  wrapEl.style.setProperty("--rowW",
-    Math.max(430, (CW + LAD_W) * scale + 6).toFixed(1) + "px");
+  /* **上の行の はばは「ばんめん＋図」ちょうど。**（2026-09-20・作者の 実機写真
+     「みぎはこんなにあくの？」）
+     430px を 下限に して いた ころ、**ばんめんが たてで きまる 端末**
+     （iPhone SE3 の Safari）では 上の行だけ 画面いっぱい(359px)に のびて、
+     ばんめん＋図(325px)との あいだに **みぎだけ 34px 空いて いた**。
+     ぴったりに すると `#wrap` の `align-items: center` が ぜんぶを まんなかに
+     そろえる ので、左右 均等の あきに なる。
+     **ばんめんは 1px も 変わらない**（大きさは もう 決まって いる）。
+
+     下限 430px を 入れた もとの 理由は 2026-09-19 の
+     「行が 303px に 縮んで 見送っ／た と 折れた」件 だが、
+     あれは **そえ字（今◯人・最高）が あった ころ**の はなし。
+     いまは カードが 減って いて、375x553 でも 折れない（実測）。
+     **戻す ときは かならず おだい194とおりを 測りなおす こと。** */
+  wrapEl.style.setProperty("--rowW", ((CW + LAD_W) * scale + 6).toFixed(1) + "px");
   wrapEl.style.setProperty("--boardW", (CW * scale).toFixed(1) + "px");
   /* **「やめる」と スピーカーの はばは 進化の図と おなじ。**（2026-09-20・作者）
      図の はばは 倍率で 変わる ので、CSS からは 変数で 見る。 */
