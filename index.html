@@ -95,7 +95,7 @@
   #stage { position: relative; display: flex; align-items: flex-start; gap: 6px;
     width: 100%; max-width: var(--rowW, 430px); justify-content: flex-start; }
   /* 進化の図の たて1列（やめる ＋ 図）。はばは どちらも `--ladW`。 */
-  #ladCol { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
+  #ladCol { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }  /* gap は JS の GIVEUP_GAP と そろえる */
   canvas#ladderCv { display: block; border-radius: 14px;
     box-shadow: 0 6px 16px rgba(180,150,160,.20); }
   canvas#game {
@@ -456,7 +456,7 @@
      タイトル画面で 図が 26px 上に ずれて、ばんめんの 下端と そろわなく なる。 */
   #giveUp {
     visibility: hidden;
-    width: var(--ladW, 46px); height: 22px; box-sizing: border-box;
+    width: var(--ladW, 46px); height: var(--quitH, 22px); box-sizing: border-box;
     font-family: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0;
     color: #92687c; background: rgba(255,255,255,.80); border: 2px solid #fff;  /* 2.48 → 4.52 */
     border-radius: 11px; padding: 0 1px; cursor: pointer; white-space: nowrap;
@@ -468,6 +468,9 @@
      「本当に？」（4文字＝36px）は はみ出す ので「本当？」に した。
      ここを 4文字に 戻す なら はばの ほうを 考えなおす こと。 */
   #giveUp.arm { color: #b8365c; background: #fff0f4; border-color: #ffd0de; }
+  /* たてに よゆうが できた ので 字を 1px 大きく。**320px では 9px の まま**
+     ── あちらは ボタンの 中が 29px しか なく、10px の 3文字（30px）が 入らない。 */
+  @media (min-width: 341px){ #giveUp { font-size: 10px; } }
   #wrap.playing #giveUp { visibility: visible; }
   #giveUp:active { transform: translateY(1px); box-shadow: none; }
   /* はばは 進化の図と おなじ（作者の 指示）。たては おだいの カードに そろえる。 */
@@ -862,7 +865,13 @@ const CW = 420, CH = 620;
 // みぎの しんかの図の はば（ばんめんと 同じ ものさし）。
 // ばんめんの CW/CH には いっさい さわらない ので、ゲームの 中身は 変わらない。
 const LAD_W = 56;
-const GIVEUP_CSS = 26;               // やめる(22px) ＋ すきま(4px)。画面の px
+/* **「やめる」の 高さは スピーカーに そろえる**（2026-09-20・作者）。
+   スピーカーは おだいの 行の 高さ なりで、**端末で 変わる**
+   （375x553 で 33px、320x568 では おだいが 2行に なるので 48px）。
+   決め打ちに できない ので `fitCanvas` で はかって `--quitH` に 入れる。
+   図は その ぶんだけ 上を 詰める（`GIVEUP_GAP` は ボタンと 図の すきま）。 */
+let   GIVEUP_CSS = 26;               // やめる ＋ すきま。fitCanvas が はかりなおす
+const GIVEUP_GAP = 4;
 let   LAD_H = 620;                   // 進化の図の たて（キャンバスの ものさし）
 // fitCanvas() は この すぐ下で 1回 よばれる ので、ここで 宣言して おく。
 // 下の renderLadder の そばに 置くと「初期化前に さわった」で 落ちる（TDZ）。
@@ -995,8 +1004,21 @@ function fitCanvas(){
   /* **「やめる」と スピーカーの はばは 進化の図と おなじ。**（2026-09-20・作者）
      図の はばは 倍率で 変わる ので、CSS からは 変数で 見る。 */
   wrapEl.style.setProperty("--ladW", (LAD_W * scale).toFixed(1) + "px");
+  /* **「やめる」の 高さは スピーカーの 実測。**
+     そろえる 相手が 端末で 変わる ので、ここで はかって CSS 変数に 出す。
+     `16〜64` に 丸めて あるのは、DOM を にせものに した 道具の なかで
+     とんでもない 数が 返る ため（`Math.max(120, NaN)` の 罠と 同じ 系統）。 */
+  {
+    const se = document.getElementById("sound");
+    let qh = 22;
+    if (se){
+      const hh = se.getBoundingClientRect().height;
+      if (isFinite(hh) && hh > 0) qh = Math.round(Math.max(16, Math.min(64, hh)));
+    }
+    wrapEl.style.setProperty("--quitH", qh + "px");
+    GIVEUP_CSS = qh + GIVEUP_GAP;
+  }
   /* **図は「やめる」の ぶんだけ 上を 詰める。**
-     `GIVEUP_CSS` は ボタンの 高さ＋すきま（画面の px）。
      倍率で わって キャンバスの ものさしに 直す ので、
      **どの 端末でも 図の 下端は ばんめんの 下端と そろう**。 */
   LAD_H = Math.max(120, CH2 - GIVEUP_CSS / scale);
