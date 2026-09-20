@@ -55,12 +55,21 @@
     padding: 4px 6px; text-align: center;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
-  .card .lbl { font-size: 12px; letter-spacing: .06em; color: #a58e83; }
+  /* **色は「色あいと あざやかさは そのまま、あかるさ だけ 下げる」で 決めて いる。**
+     （2026-09-19・第3回評価の コントラスト指摘）
+     HUD の 字は 白い カード（実効 `#fffafc`）の 上に あるので、
+     小さい字は 4.5:1、大きい字（24px 以上）は 3:1 が 目安。
+     もとの 色は 2.5〜3.0:1 しか なく、**明るい ところで 読めない**。
+     HSL の H と S を 変えずに L だけ 下げて いるので、
+     **ピンクは ピンク、茶は 茶の まま** 濃く なっただけ。
+     新しい 色を 足す ときも この やり方で 合わせる こと
+     （`tools/` に 道具は 置いて いない。使い捨ての 計算で よい）。 */
+  .card .lbl { font-size: 12px; letter-spacing: .06em; color: #896f63; }   /* 2.99 → 4.50 */
   .card .val { font-size: clamp(24px, 8vw, 34px); font-weight: 700; line-height: 1.05; color: #7a6154; }
   .card .val.long { font-size: clamp(17px, 5.6vw, 26px); }
-  .card .sub { font-size: 10px; color: #a58e83; line-height: 1.2; margin-top: -1px; }
+  .card .sub { font-size: 10px; color: #896f63; line-height: 1.2; margin-top: -1px; }
   #hud .card { min-width: 0; }
-  .card.hi .val { color: #f2789a; }
+  .card.hi .val { color: #f06189; }                                        /* 2.56 → 3.00（大きい字） */
   /* ばんめんの みぎに たての しんかの図を ならべる。
      **たてでは なく よこの 予算を つかう**のが みそ。スマホの たては
      いつも 足りて いないが（CLAUDE.md の 縦予算の はなし）、よこは あまって いる。
@@ -156,8 +165,16 @@
   #overlay .sub2 { margin: -4px 0 2px; font-size: 12px; color: #d99ab4; letter-spacing: .1em; }
   #overlay p { margin: 0; font-size: 13px; line-height: 1.8; color: #8b7568; max-width: 340px; }
   #overlay .big { font-size: 44px; font-weight: 700; color: #f2789a; line-height: 1; }
+  /* **字は 白では なく こい ワイン色。**（2026-09-19・作者が 4案から B を えらんだ）
+     白字＋やわらかい ピンクは **1.9〜2.7:1** しか なく、
+     明るい 屋外では いちばん 押して ほしい ボタンが いちばん 読めなかった。
+     ピンクを 濃く する 案（C・D）も 作ったが、**やわらかい ピンクは この ゲームの 顔**
+     なので、背景は 1px も 変えずに 字の 色だけ 落とす ことに した。
+     `#6f0b27` は グラデーションの **こい ほうの 端（#f2789a）で 4.52:1**
+     ── 上の 端では 6.41:1 なので どこを 切っても 足りて いる。
+     **白字に 戻さない こと。** 戻すなら 背景も いっしょに 濃く する ひつようが ある。 */
   button.btn {
-    font-family: inherit; font-size: 16px; font-weight: 700; color: #fff;
+    font-family: inherit; font-size: 16px; font-weight: 700; color: #6f0b27;
     background: linear-gradient(180deg,#ffa3bf,#f2789a);
     border: none; border-radius: 999px; padding: 12px 34px; cursor: pointer;
     box-shadow: 0 4px 0 #d95d80; transition: transform .06s, box-shadow .06s;
@@ -166,7 +183,7 @@
   .btnrow { display: flex; gap: 8px; align-items: center; }
   button.btn.sub {
     background: linear-gradient(180deg,#fff,#f4e8ee);
-    color: #a58e83; box-shadow: 0 4px 0 #d9c3cd; padding: 12px 22px; font-size: 14px;
+    color: #7c655a; box-shadow: 0 4px 0 #d9c3cd; padding: 12px 22px; font-size: 14px;  /* 2.59 → 4.56 */
   }
   button.btn.sub:active { box-shadow: 0 1px 0 #d9c3cd; }
   button.btn.tiny { font-size: 11px; padding: 7px 16px; box-shadow: 0 3px 0 #d9c3cd; }
@@ -182,15 +199,23 @@
   #titleCv { width: 100%; max-width: 282px; height: auto; display: block; margin: -2px 0 -4px; }
   #overlay .howto { font-size: 11px; color: #a58e83; }
   #modes { display: flex; gap: 6px; }
-  #overlay .modeinfo { font-size: 11px; color: #b79aa8; margin-top: -4px; }
+  #overlay .modeinfo { font-size: 11px; color: #92687c; margin-top: -4px; }  /* 2.50 → 4.56 */
+  /* **高さ 44px は 下げない こと。**（2026-09-19・第3回評価）
+     もとは 12px＋上下7px＝**約32px** で、指の 目安 44px に 届いて いなかった。
+     ここは「まめまるが 増える／増えない」を えらぶ ところで、
+     **遊びかたを 決める いちばん 大事な 2択**なのに いちばん 小さかった。
+     たての 予算は タイトルが いつも ぎりぎり なので（下の 縦予算の はなし）、
+     `padding` では なく `min-height` ＋ `inline-flex` で のばす
+     ── こうすると 文字は まんなかの まま、当たり判定 だけ 44px に なる。 */
   button.mode {
     font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-    color: #b79aa8; background: rgba(255,255,255,.85);
+    color: #94697e; background: rgba(255,255,255,.85);                       /* 2.53 → 4.53 */
     border: 2px solid #f0dfe6; border-radius: 999px; padding: 7px 14px;
     white-space: nowrap;
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
   }
   button.mode.on {
-    color: #fff; background: linear-gradient(180deg,#ffb3cd,#f78bad);
+    color: #6f0b27; background: linear-gradient(180deg,#ffb3cd,#f78bad);   /* 2.7 → 5.28 */
     border-color: #f78bad; box-shadow: 0 3px 0 #dd6f92;
   }
   textarea { -webkit-user-select: text; user-select: text; }
@@ -214,7 +239,30 @@
     border: 2px solid #ffdfec; border-radius: 10px; padding: 7px; color: #6b5548;
     background: #fff;
   }
-  #save .msg { min-height: 15px; font-weight: 700; color: #45a35f; }
+  #save .msg { min-height: 15px; font-weight: 700; color: #367f4a;
+    border-radius: 10px; padding: 4px 8px; }
+  /* **あいことばが 当たった しゅんかん、文の うしろを 1回 流す。**
+     （2026-09-20・作者「今の表示の仕方だと気付かない」）
+     もとは 文字が 入れかわるだけ で、目が コード欄に ある 人は 見のがして いた。
+     にじ色を **よこに 1度 通す**だけ。点滅では ない ので
+     `prefers-reduced-motion` でも こわく ない が、下で 念のため 止めて ある。
+     **`background-size` を 100% に 戻さない こと** ── 動かす には 幅が いる。 */
+  #save .msg.hit {
+    color: #2f6b40;
+    background-image: linear-gradient(100deg,
+      rgba(255,255,255,0) 0%,   #fff3b0 18%, #ffd1e3 34%,
+      #cfe9ff 50%, #d8f6d8 66%, rgba(255,255,255,0) 84%);
+    background-size: 260% 100%;
+    animation: msgHit 1.25s ease-out 1;
+  }
+  @keyframes msgHit {
+    0%   { background-position: 130% 0; transform: scale(1);    }
+    18%  {                               transform: scale(1.06); }
+    100% { background-position: -60% 0; transform: scale(1);    }
+  }
+  @media (prefers-reduced-motion: reduce){
+    #save .msg.hit { animation-duration: .01s; background-image: none; }
+  }
   #missions { width: 100%; max-width: var(--rowW, 430px); display: flex; gap: 6px; }
   /* **`min-width: 0` を 外さない こと。**（2026-09-19・実測で 発覚）
      flex の 子は 既定で `min-width: auto` ＝ **中身より 小さく ならない**。
@@ -235,7 +283,7 @@
               background: linear-gradient(90deg,#ffcf7a,#f2789a); transition: width .25s; }
   .ms.done { animation: msPop .55s ease-out; }
   .ms.clear { background: #e9fbee; border-color: #bfeecd; }
-  .ms.clear .mt { color: #45a35f; }
+  .ms.clear .mt { color: #367f4a; }                  /* 2.93 → 4.54 */
   .ms.clear .mb i { background: linear-gradient(90deg,#8fdca4,#4fbf72); }
   @keyframes msPop {
     0%   { transform: scale(1); background: rgba(255,255,255,.72); }
@@ -337,16 +385,13 @@
     .card { padding: 2px 4px; border-width: 2px; }
     .card.next, .card.keep { flex: 0 0 58px; }
     .card.next canvas, .card.keep canvas { height: 26px; }
-    .card.lv { flex: 0 0 60px; }
-    .card.lv .lbl { font-size: 11px; }
-    .card.lv #riseStamp { font-size: 10px; }
     .ms { padding: 3px 7px 4px; border-radius: 11px; }
     .ms .mt {
       font-size: 11px; height: 15px; line-height: 15px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ms .mb { height: 5px; margin-top: 2px; }
-    #sound { flex: 0 0 38px; font-size: 15px; }
+    #sound { font-size: 14px; }
   }
 
   /* **320px の 端末では おだいを 2行に する。**（2026-09-19・実測）
@@ -367,38 +412,72 @@
   .card.keep:active { transform: translateY(2px); }
   .card.keep.used { opacity: .45; }
   .card.keep.ready { border-color: #ffb0cd; background: rgba(255,244,249,.9); }
-  .card .lbl.k { color: #e07a9c; }
+  .card .lbl.k { color: #d1396c; }                   /* 2.74 → 4.51 */
   /* 預ける の あとに 入った Lv⭐＋やめる の カード */
   .card.lv {
     flex: 0 0 68px; padding: 4px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   .card.lv .lbl {
-    font-size: 12px; font-weight: 700; color: #e07a9c;
+    font-size: 12px; font-weight: 700; color: #d1396c;   /* 2.74 → 4.51 */
     white-space: nowrap; line-height: 1.25;
   }
   .card.lv #riseStamp { font-size: 11px; }
+  /* **この かたまりは `.card.lv` の 本体より あとに 置く こと。**（2026-09-20）
+     おなじ 指定が 上の `@media (max-height:700px)` の 中にも あったが、
+     **本体の ほうが あとに 書いてあって ずっと 効いて いなかった**
+     （実測：せまい 端末でも 68px の まま）。CSS は 同じ つよさなら あとが 勝つ。
+     52px に するのは、320px の 端末で Lv と 連鎖の 2枚が 68px ずつ あると
+     のこりが 51px しか なく **「見送った」が 2行に 折れる** ため（実測）。 */
+  @media (max-height: 700px){
+    .card.lv { flex: 0 0 52px; padding: 3px 2px; }
+    .card.lv .lbl { font-size: 11px; }
+    .card.lv #riseStamp { font-size: 10px; }
+    #chainCard .lbl { font-size: 10px; }
+  }
   /* **はばを 先に とって おく こと。**「やめる」→「本当に？」で 1文字 ふえる ため、
      押した しゅんかん ボタンが ふとって **お題の カードが ちぢんで 文が 切れた**。
      ひろい ほうの 字に 合わせて min-width を 決め打ちする。
      **高さは お題の カードに そろえる**（align-self: stretch）。
      center に して いた ころ、たてに よゆうの ある 画面
      （パソコンの ブラウザなど）で **ここだけ 背が 低く**見えた。 */
+  /* おだいの 行の みぎはしに たて2段（スピーカー／やめる）。
+     おだいの カードと おなじ 高さに のばして、その 中で 半分ずつ わける。 */
+  #rightCol {
+    flex: 0 0 auto; align-self: stretch; display: flex; flex-direction: column;
+    gap: 4px; min-width: 62px;
+    /* **48px。** おだいの 行は もともと 33px しか なく、2つ 積むと
+       13px と 17px に なって **指では 押せない**。かと いって のばすと
+       たての よゆうが いちばん ない 端末（375x553）は ばんめんを 削る。実測：
+
+       | ここの 高さ | 375x553 の ばんめん | 🔊 ／ やめる |
+       |---|---|---|
+       | なりゆき(33) | 281.5 | 13 ／ 17 |
+       | 44 | 274.4（−2.5%） | 18 ／ 22 |
+       | **48** | **271.8（−3.4%）** | **20 ／ 24** |
+       | 56 | 266.7（−5.3%） | 24 ／ 28 |
+       | 92（44px×2） | **はみ出す**（HUD の 上端が −10px） | 42 ／ 42 |
+
+       **他の 端末（320・360・PWA）では 1px も 削らない**（たてに よゆうが ある）。
+       44px には とどかないが、この 2つは **めったに 押さない**うえ、
+       やめるは「本当に？」の 2段がまえ なので 押しまちがいは 取りかえせる。 */
+    min-height: 48px;
+  }
+  #rightCol > * { flex: 1 1 0; min-height: 0; }
   #giveUp {
-    display: none; flex: 0 0 auto; align-self: stretch;
-    min-width: 62px; box-sizing: border-box;
+    display: none; width: 100%; box-sizing: border-box;
     font-family: inherit; font-size: 10px; font-weight: 700;
-    color: #b79aa8; background: rgba(255,255,255,.72); border: 2px solid #fff;
-    border-radius: 14px; padding: 4px 8px; cursor: pointer; white-space: nowrap;
+    color: #92687c; background: rgba(255,255,255,.72); border: 2px solid #fff;  /* 2.48 → 4.52 */
+    border-radius: 12px; padding: 2px 4px; cursor: pointer; white-space: nowrap;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
   #giveUp:active { transform: translateY(1px); box-shadow: none; }
   #wrap.playing #giveUp { display: block; }
   #giveUp:active { transform: translateY(1px); }
   #sound {
-    flex: 0 0 46px; background: rgba(255,255,255,.72);
-    border: 2px solid #fff; border-radius: 14px;
-    font-size: 17px; cursor: pointer; padding: 0; line-height: 1;
+    width: 100%; background: rgba(255,255,255,.72);
+    border: 2px solid #fff; border-radius: 12px;
+    font-size: 15px; cursor: pointer; padding: 0; line-height: 1;
     box-shadow: 0 2px 0 rgba(190,170,160,.25);
   }
   #sound:active { transform: translateY(2px); box-shadow: none; }
@@ -511,10 +590,12 @@
 <body>
 <div id="wrap">
   <div id="hud">
-    <div class="card"><div class="lbl">見送った</div><div class="val" id="cur">0</div>
-      <div class="sub" id="curSub">今 0人</div></div>
-    <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div>
-      <div class="sub" id="best">最高 0</div></div>
+    <!-- **そえ字（今◯人／最高◯）は 消した。**（2026-09-20・作者）
+         どちらも「いま 見て いる 数」では なく、目が 行く ぶん じゃまに なる。
+         最高は 結果画面と タイトルに 出る。いまの 人数は ばんめんを 見れば 分かる。
+         **戻すと たてが 12px ふえる**ので、戻す なら たての 予算から 考える こと。 -->
+    <div class="card"><div class="lbl">見送った</div><div class="val" id="cur">0</div></div>
+    <div class="card hi"><div class="lbl">スコア</div><div class="val" id="score">0</div></div>
     <!-- **預ける の あった ばしょ**（2026-09-19）。
          Lv と ⭐ と やめる は もともと 下の 帯に あったが、帯ごと 消した。
          やめる も 同じ 帯に いた ので ここへ 移す：320px では
@@ -530,8 +611,15 @@
       <div class="lbl" id="riseInfo">Lv.1</div>
       <div class="lbl" id="riseStamp">⭐0</div>
     </div>
+    <!-- **その回の さいだい連鎖。**（2026-09-20・作者）
+         れんさは このゲームで いちばん 気持ちの いい ところ なのに、
+         **出た しゅんかんの 1.7秒しか 画面に なく、記録も どこにも 残って いなかった**。
+         結果画面の 内わけを 消した ので、ここが 唯一の 置き場に なる。 -->
+    <div class="card lv" id="chainCard">
+      <div class="lbl">連鎖</div>
+      <div class="lbl" id="chainMax">0</div>
+    </div>
     <div class="card next"><div class="lbl">次</div><canvas id="nextCv"></canvas></div>
-    <button id="sound" title="音">🔊</button>
   </div>
 
   <!-- **やめる は おだいの 行の みぎはし。**（2026-09-19）
@@ -544,7 +632,14 @@
   <div id="missions">
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
-    <button id="giveUp">やめる</button>
+    <!-- **スピーカーと やめる は たてに 2段。**（2026-09-20・作者）
+         上の 行に 連鎖の カードを 足した ぶん、スピーカーが 入らなく なった。
+         おだいの カードは 2行ぶんの 高さが ある ので、ここに 2つ 積める。
+         **たてを 1px も 使わない**のは 前と 同じ。 -->
+    <div id="rightCol">
+      <button id="sound" title="音">🔊</button>
+      <button id="giveUp">やめる</button>
+    </div>
   </div>
 
   <div id="stage">
@@ -579,8 +674,6 @@
       <button class="link" id="codeBtn">記録を保存・読み込み</button>
       <button class="link" id="editCharBtn">まめまるを選びなおす</button>
       <p class="pickHint hidden" id="pickHint">好きなまめまるを 6つ選べます ✨</p>
-      <button class="link" id="slowBtn">考える時間：普通</button>
-      <button class="link" id="calmBtn">演出をひかえめに</button>
     </div>
   </div>
 
@@ -797,7 +890,37 @@ let   SKIRT = SKIRT_MAX;   // じっさいの 値は fitCanvas が きめる（�
 const RISE_PEEK = 9.0;    // せり上がる 何秒前から すそに 顔を 出すか
 const LIFT_SEC  = 0.70;   // ゆかを すりぬけて 定位置に つくまで
 const CEIL = 0;                      // てんじょう（これより上へは 出られない）
-const FLOOR_MIN = 242;            // ゆかが上がりきるところ（DANGER 152 の 90px下）
+/* **ゆかが 上がりきる ところ。いちばん 大きい子が 2段 入る 高さで 止める。**
+   （2026-09-20・作者「床のせりあがりの上限を設けたい。一番大きいキャラクタが3段」）
+   242 の ころは DANGER(152) の 90px下 ＝ **いちばん 大きい子(たて128)が
+   1段も 入らない**ところまで 上がって いた。
+   `DANGER 152 ＋ 128×2 = 408`。**3段(536) では ない。**
+   800ゲームの グリッド（5がけ×5せいど×8たね×2モード）で 測った：
+
+   |  | 決着 | 点 中央 | 秒 中央 | ρ(精度,1手あたり点) | いちばん長い |
+   |---|---|---|---|---|---|
+   | ふえない・いま(242) | 100% | 46.0 | 136.3 | +0.10 | 429秒 |
+   | ふえない・**2段(408)** | **100%** | 40.5 | 130.3 | +0.14 | 801秒 |
+   | ふえない・3段(536) | **99%** | 45.0 | 139.5 | +0.06 | **900秒（3件 終わらず）** |
+   | ふえる・いま(242) | 100% | 33.0 | 88.6 | +0.17 | 385秒 |
+   | ふえる・**2段(408)** | **100%** | 36.0 | 106.3 | +0.12 | 463秒 |
+   | ふえる・3段(536) | 100% | 35.0 | 98.9 | +0.10 | 764秒 |
+
+   点も ρ も **ぜんぶ ぶれの 中**（ρ は ±0.10）。ちがうのは **決着**だけ。
+   3段は「ふえない」で **上手い人の ゲームが 終わらなく なる**。
+   いちばん こまる かど（がけ1.4・せいど1.0）を 14ゲームずつ 測りなおすと：
+
+   | | 終わらない | 秒 中央 |
+   |---|---|---|
+   | いま(242) | 0/14 | 310 |
+   | **2段(408)** | **0/14** | 419 |
+   | 3段(536) | **4/14** | 636 |
+
+   このゲームは **合体が 自動の 安全弁**で、放って おくと 終わらない
+   （設計判断1）。決着は ゆかの せりあがりで **外から 足した もの**なので、
+   上限を 上げすぎると その 決着が まるごと 消える。
+   **3段に したく なったら 536 に する だけ**だが、上の 数字を 承知の うえで。 */
+const FLOOR_MIN = 408;            // DANGER 152 ＋ いちばん大きい子 128 × 2段
 let floorY = FLOOR0;
 const DANGER = 152;          // 上限ライン
 const HOLD_Y = 78;           // 手にもっている高さ
@@ -887,8 +1010,12 @@ let chainScore = 0;                  // れんさで もらった てん
 let clearScore = 0;                  // おそうじで もらった てん
 let clearFx = null, clears = 0;
 /* えんしゅつ ひかえめ（光がにがてな人・OSの設定） */
+/* **「演出をひかえめに」の ボタンは 消した。**（2026-09-20・作者）
+   ただし **しくみは 残す**。ひかりの 明滅は 光過敏の 人には 体の 問題に なる ので、
+   **端末の「視差を減らす／動きを減らす」設定を 見て 自動で ON**に する。
+   ボタンが 要らなかった だけで、配慮が 要らなく なった わけでは ない。
+   `mamemaru-calm` は もう 読まない（切りかえる 口が ない ため）。 */
 let calmFx = false;
-try { calmFx = localStorage.getItem("mamemaru-calm") === "1"; } catch(e){}
 try { if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) calmFx = true; } catch(e){}
 /* 画面ぜんたいの ひかり。ひかえめ設定なら 出さない。
    同じコマに 2まい かさならないように 1まいだけに する */
@@ -1210,7 +1337,14 @@ function levelAt(sec){ return Math.min(9, 1 + Math.floor(Math.max(0, sec) / LV_S
    だから「1.5 と それ以外」の 差（0.10〜0.17）は 読んで よいが、
    1.8 / 2.0 / 2.25 の 順番は 読んでは いけない。 */
 const RISE_MUL = 1.5;
-function riseInterval(){ return Math.max(9, 22 - (level-1) * 1.8) * RISE_MUL; }
+/* **せりあがりの 間かくは いつも 同じ。**（2026-09-20・作者）
+   もとは `max(9, 22-(Lv-1)*1.8) * 1.5` ＝ 33秒 から はじまって
+   Lv が 上がるほど 短く なり、Lv8 で 13.5秒 まで 詰まって いた。
+   ゆかの 上限（上の FLOOR_MIN）と いっしょに 測って、
+   点も ρ も ぶれの 中（上の 表）。**速さの 上がりかたは
+   `dropDelay()`（落ちてくる 早さ）と `levelAt()` が もう 受けもって いる**ので、
+   ここまで 詰める ひつようは なかった。 */
+function riseInterval(){ return 22 * RISE_MUL; }   // いつも 33びょう
 /* **ゆかは 時計だけで 上げる。落とした回数を 混ぜない。**
    「時計と 落下数の 早いほう」を 2026-09-17 に 作って 800ゲーム 測り、捨てた。
    くわしくは CLAUDE.md の「ゆかを 落下数でも 上げる案（捨てた）」。 */
@@ -1220,8 +1354,14 @@ function dropDelay(){ return Math.max(.17, .44 - (level-1) * .035); }
    「どの子か 見る → おなじ子を さがす → ねらう」に 足りない。
    記録は 分けなくて よい：ゆかは 時計で 上がるので、
    **長く 考えるほど 置ける 数が へって 点は むしろ 下がる**（実測で 確かめる）。 */
-let slowMode = false;
-try { slowMode = localStorage.getItem("mamemaru-slow") === "1"; } catch(e){}
+/* **かんがえじかんは いつも「ゆっくり」（15びょう）。**（2026-09-20・作者）
+   えらべる ように して いたが、**ふつう（5びょう）を えらぶ 理由が なかった**
+   ── ゆかは 時計で 上がる ので、長く 考えるほど 置ける 数が へって
+   点は むしろ 下がる。つまり 難しく したい 人だけの ツマミで、
+   タイトルの たての 予算を 1行 つかう ほどでは なかった。
+   **`mamemaru-slow` は もう 読まない。** 前に「ふつう」で 保存した 人も
+   ゆっくりに なる（そちらの ほうが やさしい ので 害は ない）。 */
+let slowMode = true;
 const HOLD_LIMIT = 5.0;
 function holdLimit(){
   // はじめの 25びょうは ゆっくり かんがえられる（初見の 事故を へらす）
@@ -1311,26 +1451,98 @@ function newMission(){
    **進みが 0 の ものは 持ちこさない。** 毎回 おなじ おだいが 居すわると
    「まいかい ちがう」が 消える。持ちこすのは やりかけ だけ。 */
 const MISSION_CARRY = ["pop", "make", "drop", "chain"];
+/* **4つ ぜんぶ 作りなおす こと。** 名前の 入る pop/make だけで よかったのは
+   「同じ セッションの なかで 持ちこす」あいだ だけ。
+   リロードを またぐ ように なって、`text` を 持って いない 復元ぶん
+   （drop / chain）も ここで 作る ひつようが できた。 */
 function retextMission(m){
-  if (m.id === "pop")  m.text = `${TIERS[LAST].name}を ${m.need}回見送る`;
-  if (m.id === "make") m.text = `${TIERS[m.tier].name}を ${m.need}人作る`;
+  if (m.id === "pop")   m.text = `${TIERS[LAST].name}を ${m.need}回見送る`;
+  if (m.id === "make")  m.text = `${TIERS[m.tier].name}を ${m.need}人作る`;
+  if (m.id === "drop")  m.text = `${m.need}回落とす`;
+  if (m.id === "chain") m.text = `4連鎖以上を ${m.need}回出す`;
   return m;
 }
-/* 結果画面に 出す「いちばん おしい おだい」。なければ null。 */
+
+/* やりかけの おだいを **リロードを またいで** 持ちこす。（2026-09-19）
+   持ちこし じたいは 2026-09-17 に 入れたが **メモリの なかだけ**で、
+   ホーム画面に もどる・タブを 切る・アプリを 落とす と 消えて いた。
+   PWA は 裏に まわると いつでも 捨てられる ので、
+   **「あと2人」で 中断した 人が いちばん 損を する** 形だった。
+
+   **入って くる 値は 外から の もの**（人が さわれる ところに ある）なので、
+   記録コードの ときと 同じ しつこさで 見る こと：
+   数は `safeNum`、`id` は `MISSION_CARRY` に ある ものだけ、
+   `tier` は 顔ぶれの 中に ある 番号だけ、`prog < need` の ものだけ。
+   `text` は **保存しない**。かならず `retextMission` で 作りなおす
+   ── 保存すると 顔ぶれを 変えた あとに いない子の 名前が のこる。 */
+const CARRY_KEY = "mamemaru-carry";
+let savedCarry = [];
+function carryableNow(){
+  return (missions || [])
+    .filter(m => m && !m.done && m.prog > 0 && m.prog < m.need
+                 && MISSION_CARRY.includes(m.id))
+    .map(m => ({ id: m.id, tier: m.tier, need: m.need, prog: m.prog }));
+}
+function saveCarry(){
+  try { localStorage.setItem(CARRY_KEY, JSON.stringify(carryableNow().slice(0, 2))); } catch(e){}
+}
+try {
+  const a = JSON.parse(localStorage.getItem(CARRY_KEY) || "[]");
+  if (Array.isArray(a)) savedCarry = a
+    .filter(m => m && typeof m === "object" && MISSION_CARRY.includes(m.id))
+    .map(m => {
+      const o = { id: m.id, need: safeNum(m.need), prog: safeNum(m.prog),
+                  done: false, doneT: 0, carried: true };
+      if (o.id === "make"){
+        const t = safeNum(m.tier);
+        o.tier = (t >= 1 && t <= 5) ? t : 1;
+      }
+      return o;
+    })
+    .filter(m => m.need > 0 && m.prog > 0 && m.prog < m.need)
+    .slice(0, 2);
+} catch(e){}
+/* 結果画面に 出す「いちばん おしい おだい」。なければ null。
+
+   **「おしい」の しきい値**（2026-09-19・第3回評価の 指摘）
+   もとは **やりかけなら 何でも 出して いた**。実測（64ゲーム）：
+   72% の ゲームで 出て、いちばん おしい のこりは 中央値 5 だが **最大 42**。
+   「80回落とす」が 38回で 終わると **「あと 42」**と 出て いた
+   ── これは おしくない。おしい と 言われ慣れると、
+   ほんとうに あと1つの ときの 「あと 1」まで 効かなく なる。
+
+   | ルール | 出る ゲームの わりあい |
+   |---|---|
+   | やりかけなら 必ず（もと） | 72% |
+   | のこり ≤ 半分 かつ ≤10 | 31% |
+   | **のこり ≤ 3分の1 かつ ≤10** | **17%** |
+
+   3分の1 に したのは、`drop`（45〜80回）で 「あと 26」まで 通って しまうのを
+   10 の 上限で 止める ため。**どちらか 片方では 足りない**
+   ── わりあいだけだと drop が ゆるく、数だけだと `chain`（3回中 あと2）が 通る。
+
+   **どの おだいかも 出す。** 「あと 3」だけでは 何が あと3 なのか 分からない
+   （おだいは 2つ あって、結果画面には どちらも 出て いない）。 */
 function nearestMission(){
   let top = null;
   for (const m of missions){
     if (!m || m.done || m.prog <= 0 || !MISSION_CARRY.includes(m.id)) continue;
     const left = m.need - m.prog;
     if (left <= 0) continue;
+    if (left > Math.ceil(m.need / 3) || left > 10) continue;   // おしい ものだけ
     if (!top || left < top.left) top = { left, text: m.text };
   }
   return top;
 }
 function resetMissions(){
-  const keep = missions.filter(m => m && !m.done && m.prog > 0
-                                     && MISSION_CARRY.includes(m.id))
-                       .map(retextMission);
+  let keep = missions.filter(m => m && !m.done && m.prog > 0
+                                   && MISSION_CARRY.includes(m.id))
+                     .map(m => { m.carried = true; return retextMission(m); });
+  // メモリに 何も ない とき（＝読みこんだ 直後）だけ 保存ぶんを つかう
+  if (!keep.length && savedCarry.length){
+    keep = savedCarry.map(retextMission);
+    savedCarry = [];
+  }
   missions = keep.slice(0, 2); stamps = 0;
   while (missions.length < 2) missions.push(newMission());
   renderMissions();
@@ -1405,9 +1617,8 @@ function raiseMission(id, v){
 }
 
 const elCur = document.getElementById("cur");
-const elCurSub = document.getElementById("curSub");
 const elScore = document.getElementById("score");
-const elBest = document.getElementById("best");
+const elChainMax = document.getElementById("chainMax");
 const elDrops = document.getElementById("drops");
 const overlay = document.getElementById("overlay");
 const TITLE_HTML = overlay.innerHTML;      // タイトル画面を とっておく
@@ -1607,9 +1818,8 @@ function updateHUD(){
   // 結果画面の「みおくり NN」は 点数（＝かいすう × 3）なので、
   // どちらも「みおくり」だと **同じ ことばで ちがう 数字**に 見えて まぎれる。
   elCur.textContent = pops;
-  if (elCurSub) elCurSub.textContent = "今 " + cur + "人";
   elScore.textContent = scoreNow();
-  elBest.textContent = "最高 " + Math.max(best, bestRef());
+  if (elChainMax) elChainMax.textContent = chainBest;
   /* **けたが ふえたら 字を 小さく する。**（2026-09-19）
      320x568 の カードは 中身 37px しか なく、4けた（9999）は 49px で はみ出す。
      ふつうに 遊んで 4けたには ならない（実測の 最高は 308）が、
@@ -1839,7 +2049,7 @@ function addChain(x, y){
   chainX = x; chainY = y;
   if (x < chainLo) chainLo = x;
   if (x > chainHi) chainHi = x;
-  if (chain > chainBest) chainBest = chain;
+  if (chain > chainBest){ chainBest = chain; updateHUD(); }   // HUD の「連鎖」に すぐ出す
   if (chain === CHAIN_MIN) bumpMission("chain");
 
   if (chain >= CHAIN_MIN){
@@ -4603,8 +4813,10 @@ function drawOhirune(){
     ctx.textAlign = "center";
     ctx.font = 'bold 20px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
     ctx.lineJoin = "round"; ctx.lineWidth = 6; ctx.strokeStyle = "#ffffff";
-    ctx.strokeText("おひるね", CW/2, by - 14);
-    ctx.fillStyle = "#7a5ba6"; ctx.fillText("おひるね", CW/2, by - 14);
+    // **「おひるね中」。**（2026-09-20・作者）「おひるね」だけだと
+    //  見出しに 見えて、いま 止まって いる ことが 伝わらない。
+    ctx.strokeText("おひるね中", CW/2, by - 14);
+    ctx.fillStyle = "#7a5ba6"; ctx.fillText("おひるね中", CW/2, by - 14);
     ctx.font = 'bold 12px "Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif';
     ctx.lineWidth = 5;
     ctx.strokeText("そっと うごかせるよ", CW/2, by + 28);
@@ -4918,6 +5130,17 @@ function update(dt){
      **見えて いる ばしょと つかめる ばしょが 最大 128px ずれる**。
      ここで 減らせば ずれは どんなに 長くても 0.7秒で 消える。 */
   if (liftT > 0){ liftT = Math.max(0, liftT - raw); if (liftT === 0) for (const b of balls) b.lift = 0; }
+  /* **画面ゆれ と UI の びっくりは、おひるねより 前で 生の dt で 減らす こと。**
+     （2026-09-20・作者「昼寝中に全消しすると、演出が昼寝中ずっと継続してる」）
+     もとは おひるねの 早期 return より **あと**に あった ので、
+     眠って いる あいだ `shake` が 減らず、**全消しの 16 が そのまま 居すわって
+     画面が 9秒ちかく ゆれつづけて いた**（実測：おひるねの あいだ ずっと 16）。
+     `clearFx` や つぶつぶは `stepFx(raw)` で ちゃんと 消えて いた ので、
+     **のこって いたのは ゆれだけ**だった ── それが いちばん 目につく。
+     ゆれも びっくり顔も **ゲームの 時間では なく 画面の 都合**なので、
+     `timeAmt` では なく 生の dt で 減らすのが 正しい。 */
+  shake *= Math.pow(.02, raw);
+  stepUiShock(raw);
   stepOhirune(raw);                      // 段どりは 生の dt（ここだけは 止まらない）
   // ③ねむる ④おひるね ⑤めざめ は **時間が 完全に 止まって いる**。
   // ただし 寝息と zzz は 動かす（静止させると 一時停止に 見える）。
@@ -4931,8 +5154,6 @@ function update(dt){
   landCool = Math.max(0, landCool - dt);
   heartCool = Math.max(0, heartCool - dt);
   riseGlow = Math.max(0, riseGlow - dt);
-  stepUiShock(dt);
-  shake *= Math.pow(.02, dt);
   stepFx(dt);
   stepParade(dt);          // けっか画面の 行列（state !== "play" でも うごく）
 
@@ -5201,6 +5422,7 @@ function drop(){
 
 function gameOver(byUser){
   state = "over";
+  saveCarry();                   // やりかけの おだいを ここで ディスクに 置く
   shake = byUser ? 0 : 9;
   overMarkT = byUser ? 0 : 2.2;  // 「こえちゃった！」は しゅんかん だけ
   startParade();                 // その回に 見送った子が よこに 走る
@@ -5234,11 +5456,10 @@ function gameOver(byUser){
   //  `rankOf(sc)` だと、さいこう60点の人が 0点で 終えた とき
   //  「まめまる はじめました／つぎの目標：15点」と **降格の 表示**に なって いた。
   //  ヒント側は 生涯ベストを 見て いた ので 基準も 食いちがって いた。
-  //  その回の 出来は 見出しと 点数と 内わけが 伝える。称号は 身分。
+  //  その回の 出来は 見出しと 点数が 伝える。称号は 身分。
   const topBest = Math.max(bestEver, bestFreeEver);
   const next = nextGoal(topBest);
   const nm = nearestMission();      // やりかけの おだい（持ちこす ので 出す）
-  const modeName = spawnRows ? "まめまる 増える" : "まめまる 増えない";
   overlay.classList.remove("hidden");
   overlay.classList.add("result");
   overlay.innerHTML = `
@@ -5246,21 +5467,19 @@ function gameOver(byUser){
       <h1>${rainbowRun ? "にじいろ おつかれさま！ 🌈"
             : isRec ? "新しい記録！ 🎉" : (byUser ? "おつかれさま！" : "もう いっぱい…")}</h1>
       <div class="big">${sc} <span style="font-size:16px">点</span></div>
-      <p class="calc">見送り ${popScore} ＋ 連鎖 ${chainScore} ＋ 全消し ${clearScore}</p>
       <p class="rank">${rankOf(topBest)}</p>
       <p>次の目標：${next}</p>
-      <p class="ms-got">⭐ お題 ${stamps}個 達成</p>
-      ${nm ? `<p class="ms-left">あと ${nm.left} ／ お題は 次のゲームに続きます</p>` : ""}
-      ${newThemeRun ? '<div class="dex" id="resultDex"></div>' : ""}
-      <p style="font-size:10px;color:#b79aa8">モード：${modeName}${
-        rainbowRun ? " ／ 🌈 にじいろ（記録には残りません）" : ""}</p>
+      <p class="ms-got">⭐ お題 ${stamps}個 達成${
+        chainBest >= 2 ? " ／ 最大 " + chainBest + "連鎖" : ""}</p>
+      ${nm ? `<p class="ms-left">あと ${nm.left} で ⭐が1つ ふえる（${nm.text}）<br>
+        お題は 次のゲームに続きます</p>` : ""}${
+        rainbowRun ? '<p style="font-size:10px;color:#92687c">🌈 にじいろ（記録には残りません）</p>' : ""}
       <div class="btnrow">
         <button class="btn" id="againBtn">もう一度</button>
         <button class="btn sub" id="quitBtn">終わる</button>
       </div>
       ${isRec ? '<button class="link" id="saveNow">記録を保存（メモに貼っておくと安心）</button>' : ""}
     </div>`;
-  if (newThemeRun) paintDex("resultDex", true);   // **押される ほうの 画面に 出す**
   document.getElementById("againBtn").addEventListener("click", start);
   document.getElementById("quitBtn").addEventListener("click", showTitle);
   const sn = document.getElementById("saveNow");
@@ -5348,10 +5567,15 @@ function gainChar(nm){
 
 function loadFromCode(){
   const v = (loadCode.value || "").trim();
-  if (!v){ saveMsg.textContent = "文字列を貼り付けてね"; return; }
+  if (!v){ saveMsg.classList.remove("hit"); saveMsg.textContent = "文字列を貼り付けてね"; return; }
   // あいことばが さきに 当たるか みる（コードの かたち検査より 前）
   const say = (txt) => {
     saveMsg.textContent = "🌸 " + txt;
+    // **クラスを 外して 1回 レイアウトを 読んでから 付けなおす。**
+    // そうしないと 2回目の あいことばで アニメーションが 走らない
+    // （おだいの `.ms.done` と まったく 同じ 形）。
+    saveMsg.classList.remove("hit"); void saveMsg.offsetWidth;
+    saveMsg.classList.add("hit");
     loadCode.value = "";
     beep(660, .1, "triangle", .08);
     setTimeout(() => beep(880, .14, "triangle", .08), 110);
@@ -5366,8 +5590,8 @@ function loadFromCode(){
   // 解放前の ほしぞらは pool に いない ので ここでは 当たらない。
   const pinned = pinTheme(v);
   if (pinned){ say(pinned); return; }
-  if (v.length > 400){ saveMsg.textContent = "文字列が長すぎます"; return; }
-  if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.textContent = "文字列が違うみたい…"; return; }
+  if (v.length > 400){ saveMsg.classList.remove("hit"); saveMsg.textContent = "文字列が長すぎます"; return; }
+  if (!/^[A-Za-z0-9+/=]+$/.test(v)){ saveMsg.classList.remove("hit"); saveMsg.textContent = "文字列が違うみたい…"; return; }
   try {
     const o = JSON.parse(decodeURIComponent(escape(atob(v))));
     if (!o || typeof o !== "object" || Array.isArray(o)) throw 0;
@@ -5884,7 +6108,6 @@ function bindTitleButtons(){
   const btns = document.querySelectorAll("#modes .mode");
   const info = document.getElementById("modeInfo");
   const rec = document.getElementById("myRec");
-  const calm = document.getElementById("calmBtn");
   const paint = () => {
     btns.forEach(o => o.classList.toggle("on",
       (o.getAttribute("data-m") === "1") === spawnRows));
@@ -5903,9 +6126,6 @@ function bindTitleButtons(){
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
-    if (calm) calm.textContent = calmFx ? "演出ひかえめ：ON" : "演出をひかえめに";
-    const slow = document.getElementById("slowBtn");
-    if (slow) slow.textContent = "考える時間：" + (slowMode ? "ゆっくり" : "普通");
     // まだ 出して いない ヒントが あれば、ここで はじめて「出した」ことに する
     const hm = document.getElementById("hintMsg");
     if (pendingHint && hm){
@@ -5920,19 +6140,6 @@ function bindTitleButtons(){
     updateHUD();
   };
   titlePaint = paint;      // よみこみ などからも よべる ように しておく
-  const slowB = document.getElementById("slowBtn");
-  if (slowB) slowB.addEventListener("click", () => {
-    slowMode = !slowMode;
-    try { localStorage.setItem("mamemaru-slow", slowMode ? "1" : "0"); } catch(e){}
-    paint();
-    beep(slowMode ? 520 : 620, .07, "sine", .06);
-  });
-  if (calm) calm.addEventListener("click", () => {
-    calmFx = !calmFx;
-    try { localStorage.setItem("mamemaru-calm", calmFx ? "1" : "0"); } catch(e){}
-    paint();
-    beep(calmFx ? 560 : 760, .08, "triangle", .07);
-  });
   btns.forEach(b => {
     b.addEventListener("click", () => {
       spawnRows = b.getAttribute("data-m") === "1";
@@ -6100,6 +6307,17 @@ function start(){
   reset();
   markSeen();            // けしきが 決まった あと。図鑑に 1つ 足す
 
+  /* **持ちこしたら だまって いない こと。**（2026-09-19・第3回評価）
+     もとは ゲージが 途中から 始まるだけ で、はじめて 見る人には
+     **「なぜか もう 進んで いる」**としか 読めなかった。
+     ここは トーストで 言う ── お題カードに 文字を 足すと
+     はば320の 端末で 3行に なって 切れる（194とおり 実測ずみ）。 */
+  {
+    const c = missions.filter(m => m && m.carried && !m.done);
+    if (c.length) setTimeout(() => showToast(
+      "お題は つづきから", c.map(m => m.text).join(" ／ ")), 700);
+  }
+
   state = "play";
   if (!AC && soundOn){ try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
   if (AC && AC.state === "suspended") AC.resume();
@@ -6116,7 +6334,7 @@ bindTitleButtons();
    記録を すぐ保存し、もどってきたら 音を 生きかえらせる */
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){
-    try { saveRec(); } catch(e){}
+    try { saveRec(); saveCarry(); } catch(e){}
   } else {
     // **もどって きた しゅんかんに 時間を 進めない。**
     // `last` が 古いままだと dt が どかっと 入る。電話に 出て もどったら
@@ -6125,7 +6343,7 @@ document.addEventListener("visibilitychange", () => {
     if (AC && AC.state === "suspended"){ try { AC.resume(); } catch(e){} }
   }
 });
-window.addEventListener("pagehide", () => { try { saveRec(); } catch(e){} });
+window.addEventListener("pagehide", () => { try { saveRec(); saveCarry(); } catch(e){} });
 
 (function blockZoom(){
   const isField = t => t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" ||
