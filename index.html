@@ -438,7 +438,12 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ms .mb { height: 5px; margin-top: 2px; }
-    #sound { font-size: 17px; }          /* HUD の カードに なった ので 枠は カードなり */
+    /* **ここに `#hud #sound { font-size: … }` を 書かない こと。**（2026-09-22）
+       この `@media` は `#hud #sound` の 本体より **前**に ある ので、
+       同じ つよさでは あとの ほうが 勝ち、書いても 効かない
+       （`.card.lv` で 一度 やった 失敗と まったく 同じ 形）。
+       そもそも 30px は いちばん せまい カード（52px＝中身44px）でも
+       入る ことを 測って あるので、端末ごとに 変える 必要が ない。 */
   }
 
   /* **320px の 端末では おだいを 2行に する。**（2026-09-19・実測）
@@ -521,9 +526,20 @@
   /* **🔊 は HUD の いちばん みぎ**（2026-09-22・作者）。
      `.card.lv` を つけて あるので はば（68／52px）と 枠は カードと 同じ。
      ここだけ 中身を まんなかに する（ほかの カードは ラベルが 上）。 */
-  #sound {
-    font: inherit; font-size: 20px; line-height: 1; cursor: pointer;
-    justify-content: center;
+  /* **`#hud #sound` と id を 2つ 書く こと。**（2026-09-22）
+     `#sound` だけだと `#hud .card`（id＋class）の ほうが つよく、
+     `justify-content: flex-start` が 勝って **絵が カードの 上に はりついて いた**。
+     ほかの カードは ラベルが 上に 来るのが 正しい ので、
+     `#hud .card` の ほうは 変えない。ここだけ 上書きする。 */
+  #hud #sound {
+    font: inherit; line-height: 1; cursor: pointer;
+    justify-content: center; align-items: center;
+    padding: 2px;
+    /* 絵を カードいっぱいに。**1つの 大きさで ぜんぶの 端末に 入る。**
+       いちばん せまい カードは 52px（中身 52 − 枠4 − padding4 ＝ 44px）で、
+       30px の 絵は 実測 37px。5サイズ 測って どこでも はみ出さず、
+       まんなかからの ずれも よこ0・たて0。端末ごとに 変えない こと。 */
+    font-size: 30px;
   }
   #sound:active { transform: translateY(2px); box-shadow: none; }
 
