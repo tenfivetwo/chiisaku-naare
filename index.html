@@ -69,6 +69,19 @@
   .card .val.long { font-size: clamp(17px, 5.6vw, 26px); }
   .card .sub { font-size: 10px; color: #896f63; line-height: 1.2; margin-top: -1px; }
   #hud .card { min-width: 0; }
+  /* **5枚の カードの 字の 高さを そろえる。**（2026-09-22・作者）
+     `.card.lv`（連鎖・Lv）だけ たて中央ぞろえに なって いて、
+     ラベルの 高さが **13px**、2行目の 高さが **7px** ずれて いた（実測）。
+     いまは ぜんぶ 「ラベルは いちばん上・2行目は のこりの まんなか」。
+     ずれは 2px と 1px に なる。
+     **たては 1px も ふえない。** 行の 高さは もともと いちばん 背の 高い
+     カード（見送った・スコア）が 決めて いて、連鎖と Lv は その 中で
+     余って いた ── その 余りを つかうだけ。ばんめんも 1px も 変わらない
+     （375x553 で 282x437、320x568 で 263x437、3けたでも 同じ。実測）。
+     **2行目は flex コンテナに せず auto マージンで 寄せる こと。**
+     「次」の 中身は canvas なので、入れ物に できない。 */
+  #hud .card { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+  #hud .card > :nth-child(2) { margin-top: auto; margin-bottom: auto; }
   .card.hi .val { color: #f06189; }                                        /* 2.56 → 3.00（大きい字） */
   /* ばんめんの みぎに たての しんかの図を ならべる。
      **たてでは なく よこの 予算を つかう**のが みそ。スマホの たては
@@ -425,7 +438,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ms .mb { height: 5px; margin-top: 2px; }
-    #sound { font-size: 14px; border-radius: 11px; }
+    #sound { font-size: 17px; }          /* HUD の カードに なった ので 枠は カードなり */
   }
 
   /* **320px の 端末では おだいを 2行に する。**（2026-09-19・実測）
@@ -450,12 +463,18 @@
   /* 預ける の あとに 入った Lv⭐＋やめる の カード */
   .card.lv {
     flex: 0 0 68px; padding: 4px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   }
-  .card.lv .lbl {
+  /* **`.card.lv .lbl` では なく `#lvCard .lbl`。**（2026-09-22）
+     連鎖の カードも `.card.lv`（はばを 68px に する ため）を つけて いる ので、
+     ここを `.card.lv` で 書くと **連鎖の ラベルまで ピンクの 太字**に なる。
+     連鎖は 見送った・スコアと 同じ 見た目に そろえた ので、外して ある。 */
+  #lvCard .lbl {
     font-size: 12px; font-weight: 700; color: #d1396c;   /* 2.74 → 4.51 */
     white-space: nowrap; line-height: 1.25;
   }
+  /* 連鎖の 数字は ふつうの カードと 同じ `.val`。色だけ ピンクに する。 */
+  #chainCard .val { color: #d1396c; }                    /* 大きい字 なので 3:1 で よい（4.51） */
   .card.lv #riseStamp { font-size: 11px; }
   /* **この かたまりは `.card.lv` の 本体より あとに 置く こと。**（2026-09-20）
      おなじ 指定が 上の `@media (max-height:700px)` の 中にも あったが、
@@ -465,9 +484,11 @@
      のこりが 51px しか なく **「見送った」が 2行に 折れる** ため（実測）。 */
   @media (max-height: 700px){
     .card.lv { flex: 0 0 52px; padding: 3px 2px; }
-    .card.lv .lbl { font-size: 11px; }
+    #lvCard .lbl { font-size: 11px; }
     .card.lv #riseStamp { font-size: 10px; }
-    #chainCard .lbl { font-size: 10px; }
+    /* **`#chainCard .lbl` の 上書きは 置かない こと。**（2026-09-22）
+       連鎖の ラベルは 見送った・スコアと 同じ `.card .lbl`（ここでは 9px）に
+       したい。id で 書くと そちらが 勝って しまい、1枚だけ 字が 大きく なる。 */
   }
   /* **やめる は 進化の図の 上。**（2026-09-20・作者）
      おだいの 行に たて2段で 積んで いた ころは 13〜24px に しか ならず
@@ -497,15 +518,29 @@
   @media (min-width: 341px){ #giveUp { font-size: 10px; } }
   #wrap.playing #giveUp { visibility: visible; }
   #giveUp:active { transform: translateY(1px); box-shadow: none; }
-  /* はばは 進化の図と おなじ（作者の 指示）。たては おだいの カードに そろえる。 */
+  /* **🔊 は HUD の いちばん みぎ**（2026-09-22・作者）。
+     `.card.lv` を つけて あるので はば（68／52px）と 枠は カードと 同じ。
+     ここだけ 中身を まんなかに する（ほかの カードは ラベルが 上）。 */
   #sound {
-    flex: 0 0 var(--ladW, 46px); align-self: stretch;
-    background: rgba(255,255,255,.72);
-    border: 2px solid #fff; border-radius: 14px;
-    font-size: 16px; cursor: pointer; padding: 0; line-height: 1;
-    box-shadow: 0 2px 0 rgba(190,170,160,.25);
+    font: inherit; font-size: 20px; line-height: 1; cursor: pointer;
+    justify-content: center;
   }
   #sound:active { transform: translateY(2px); box-shadow: none; }
+
+  /* **おだいの 行に 入った Lv⭐。**（2026-09-22）
+     はばは `--ladW` ＝ 進化の図と おなじ で、端末に よっては **37px しか ない**。
+     HUD に いた ころの 12px だと `Lv.12` が 36px に なって ふちに つく ので、
+     ここでは 10px に する（`Lv.99` で 実測 30px）。
+     **1行に まとめない こと**（設計判断は HTML の コメント）。 */
+  /* **たての padding は 0。** 2px 入れて いた ころ、枠(2+2)＋中身(26)＋padding(4)＝34px に
+     なって、**おだいの 行が 33 → 34px に ふとり、ばんめんが 282 → 281px に 減った**（実測）。
+     この 行は ばんめんの たての 予算を そのまま 食う ので、1px も ふとらせない こと。 */
+  #missions #lvCard {
+    flex: 0 0 var(--ladW, 46px); align-self: stretch; padding: 0 2px;
+    justify-content: center;
+  }
+  #missions #lvCard .lbl { font-size: 10px; line-height: 1.3; }
+  #missions #lvCard #riseStamp { font-size: 10px; }
   
   /* ===== キャラ選択UI =====
      #overlay の 中に 入れると、flex の つぶれで 文字が カードに
@@ -631,20 +666,19 @@
          **出た しゅんかんの 1.7秒しか 画面に なく、記録も どこにも 残って いなかった**。
          結果画面の 内わけを 消した ので、ここが 唯一の 置き場に なる。 -->
     <div class="card lv" id="chainCard">
+      <!-- **見送った・スコアと 同じ かたち**（ラベル＋大きい数字）に そろえて ある
+           （2026-09-22・作者）。数字は `.lbl` では なく `.val`。
+           はばは `.card.lv` の 68px の まま で、3けたでも はみ出さない（実測）。 -->
       <div class="lbl">連鎖</div>
-      <div class="lbl" id="chainMax">0</div>
-    </div>
-    <div class="card lv" id="lvCard">
-      <!-- **Lv と ⭐ は たてに 2行。1行に しない こと。**（2026-09-19）
-           `Lv.1 ⭐0` の 1行に して いた ころ、**どちらかが 2桁に なると
-           カード（中身 56px）から はみ出して いた**（実測：2桁で 61〜68px、
-           両方 2桁でも 同じ、3桁で 83px）。Lv は 30秒で 1 上がる ので
-           5分の ゲームで 2桁に とどく ── まれな 話では ない。
-           カードは たてが 空いて いる ので、そちらを つかう。 -->
-      <div class="lbl" id="riseInfo">Lv.1</div>
-      <div class="lbl" id="riseStamp">⭐0</div>
+      <div class="val" id="chainMax">0</div>
     </div>
     <div class="card next"><div class="lbl">次</div><canvas id="nextCv"></canvas></div>
+    <!-- **🔊 は おだいの 行から ここへ**（2026-09-22・作者）。
+         おだいの 行は 33px しか なく、指で 押す ものを 置くには せますぎた。
+         HUD の カードなら 58px あるので 押しやすい。
+         はばは Lv が いた ぶん（68px／せまい画面 52px）を そのまま つかう ので、
+         **行の 合計は 1px も 変わらない** ＝ おだいも ばんめんも 動かない。 -->
+    <button class="card lv" id="sound" title="音">🔊</button>
   </div>
 
   <!-- **やめる は おだいの 行の みぎはし。**（2026-09-19）
@@ -657,11 +691,23 @@
   <div id="missions">
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
     <div class="ms"><div class="mt"></div><div class="mb"><i></i></div></div>
-    <!-- **スピーカーと やめる は たてに 2段。**（2026-09-20・作者）
-         上の 行に 連鎖の カードを 足した ぶん、スピーカーが 入らなく なった。
-         おだいの カードは 2行ぶんの 高さが ある ので、ここに 2つ 積める。
-         **たてを 1px も 使わない**のは 前と 同じ。 -->
-    <button id="sound" title="音">🔊</button>
+    <!-- **Lv⭐ は HUD から ここへ**（2026-09-22・作者）。
+         HUD の 上の 行は「その回の 成績」（見送った・スコア・連鎖）と
+         「つぎに 来る子」で そろえたい。Lv は どちらでも ない ので
+         おだいの 行の みぎはし ＝ もと スピーカーの ばしょに 移した。
+         **たてを 1px も 使わない**のは 前と 同じ。
+         **`--ladW`（進化の図と 同じ はば）は 端末で 37〜46px しか ない。**
+         だから ここでは 字を 小さく する（下の `#missions #lvCard`）。 -->
+    <div class="card lv" id="lvCard">
+      <!-- **Lv と ⭐ は たてに 2行。1行に しない こと。**（2026-09-19）
+           `Lv.1 ⭐0` の 1行に して いた ころ、**どちらかが 2桁に なると
+           カード（中身 56px）から はみ出して いた**（実測：2桁で 61〜68px、
+           両方 2桁でも 同じ、3桁で 83px）。Lv は 30秒で 1 上がる ので
+           5分の ゲームで 2桁に とどく ── まれな 話では ない。
+           ここは もっと せまい ので なおさら 1行に しない こと。 -->
+      <div class="lbl" id="riseInfo">Lv.1</div>
+      <div class="lbl" id="riseStamp">⭐0</div>
+    </div>
   </div>
 
   <div id="stage">
@@ -1034,12 +1080,16 @@ function fitCanvas(){
   /* **「やめる」と スピーカーの はばは 進化の図と おなじ。**（2026-09-20・作者）
      図の はばは 倍率で 変わる ので、CSS からは 変数で 見る。 */
   wrapEl.style.setProperty("--ladW", (LAD_W * scale).toFixed(1) + "px");
-  /* **「やめる」の 高さは スピーカーの 実測。**
+  /* **「やめる」の 高さは おだいの 行の みぎはしに ある ものの 実測。**
      そろえる 相手が 端末で 変わる ので、ここで はかって CSS 変数に 出す。
      `16〜64` に 丸めて あるのは、DOM を にせものに した 道具の なかで
-     とんでもない 数が 返る ため（`Math.max(120, NaN)` の 罠と 同じ 系統）。 */
+     とんでもない 数が 返る ため（`Math.max(120, NaN)` の 罠と 同じ 系統）。
+     **2026-09-22 に 相手が `#sound` から `#lvCard` に かわった。**
+     スピーカーを HUD へ 移した ので、そのまま `#sound` を はかると
+     **HUD の カードの 高さ（58px）が 入って、進化の図が 60px 近く 削られる**。
+     ここを いじる ときは、**おだいの 行に いま 何が いるか**を 見ること。 */
   {
-    const se = document.getElementById("sound");
+    const se = document.getElementById("lvCard");
     let qh = 22;
     if (se){
       const hh = se.getBoundingClientRect().height;
@@ -4659,6 +4709,42 @@ function drawRiseGlow(){
 /* すその 絵。**かべ・クッションより 前**に よぶ こと
    （あとに よぶと のぼって くる子が クッションの 上に のって、
    「ゆかの 前を 通って いる」ように 見える）。 */
+/* **うすい子は「1枚の 絵」に してから 貼る こと。**（2026-09-22・作者の 実機写真から）
+   `globalAlpha` を かけた まま `drawCreature` を よぶと、**図形ごとに** 背景と まざる。
+   耳の うち 体と かさなる ぶんは 2回 まざって こく なり、
+   体から はみ出した ぶんは 1回 しか まざらない ので **そこだけ すけて 見えた**
+   （パンダの 黒い 耳が 灰色に、ブタと きつねの 耳から しましまが すけて いた）。
+   いちど 不とうめいで 紙に えがいて、その 紙を うすく 貼れば むらが 出ない。
+
+   **紙は 1枚を 使いまわす こと。** 毎フレーム 作ると 電力の 予算が こわれる。
+   いちばん 大きい子（r=64）に 合わせて 1回 とる。耳は 1.22r（線の ふとさこみで
+   1.25r）まで はみ出す ので、よゆうを 見て 2.8r 角。
+   **`dpr` を 忘れない こと。** 本体の ctx は `setTransform(dpr,…)` で
+   ゲームの ものさしに して ある ので、紙も 同じに しないと ぼける。
+
+   〔やらなかった 道〕**うすくするのを やめる**（`globalAlpha` を 外す）。
+   1行で すむし すけも 消えるが、床下の 子が くっきり 手前に 見えて、
+   設計判断6-E(14)「遠くに いる」という 見せ方が 消える。戻す なら そこを 承知で。 */
+let farCv = null, farCtx = null, farS = 0;
+function farDraw(dst, tier, rr, x, y, alpha){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const need = Math.ceil(rr * 2.8) + 4;
+  if (!farCv || farS < need || farCv.width !== farS * dpr){
+    farS = Math.max(need, Math.ceil(64 * 2.8) + 4);
+    farCv = document.createElement("canvas");
+    farCv.width = farS * dpr; farCv.height = farS * dpr;
+    farCtx = farCv.getContext("2d");
+  }
+  farCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  farCtx.clearRect(0, 0, farS, farS);
+  farCtx.save();
+  farCtx.translate(farS / 2, farS / 2);
+  drawCreature(farCtx, tier, rr, tier * 1.3, 1, 0, 0, 0, 1);
+  farCtx.restore();
+  dst.globalAlpha = alpha;
+  dst.drawImage(farCv, x - farS / 2, y - farS / 2, farS, farS);
+  dst.globalAlpha = 1;
+}
 function drawUnderFloor(){
   if (state === "title") return;
   const top = floorY, bot = CH + SKIRT;
@@ -4734,10 +4820,10 @@ function drawUnderFloor(){
           const top = topStart + (topEnd - topStart) * e;
           const cy = top + rr;
           if (top > bot) continue;
+          // **`globalAlpha` を かけて drawCreature を よばない こと**（耳が すける）。
+          // 上の farDraw の コメントを 見ること。
           ctx.save();
-          ctx.globalAlpha = .62 + .38 * e;
-          ctx.translate(off + o.x, cy);
-          drawCreature(ctx, o.t, rr, o.t * 1.3, 1, 0, 0, 0, 1);
+          farDraw(ctx, o.t, rr, off + o.x, cy, .62 + .38 * e);
           ctx.restore();
         }
       }
