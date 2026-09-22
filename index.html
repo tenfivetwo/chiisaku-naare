@@ -322,9 +322,33 @@
      こちらは「よみこみの はこに 入れて」と 言う ので、
      **その ボタンの すぐ上**に 置く。つかう場所の となりで 言うのが いちばん 効く。 */
   #overlay p.hintMsg {
-    font-size: 12.5px; color: #c4568a; margin: 6px 0 2px;
+    /* **字の 色は #c4568a では ない。** あれは #fff2f7 の 上で 3.82:1 しか なく、
+       設計判断6-E'(c) で 決めた「小さい字は 4.5:1」を 満たして いなかった
+       （2026-09-22 に 気づいて 直した。背景の ピンクは 1px も 変えて いない）。 */
+    font-size: 12.5px; color: #9B2F62; margin: 6px 0 2px;
     background: #fff2f7; border: 1px solid #ffd9e7;
     border-radius: 999px; padding: 6px 14px; line-height: 1.5;
+  }
+
+  /* **にじいろ中の 知らせ。** しりとりの 並びの ときだけ 出る ので、
+     ふだんは たての 予算を 1px も 食わない（タイトルの たては いつも 足りて いない）。
+     **点滅させない こと**（光過敏）。にじは 枠の 線だけ、字は こい ワイン。
+     #9B2F62 は この 背景で 6.49:1。
+
+     **2行に しない こと。** さいしょ 12.5px で 本文＋そえ字の 2行に して いたが、
+     行の 高さが 49px に なり、**iPhone SE3 の Safari（375x553）で
+     「始める」が 画面の 外（569px）に 押し出された**（実測）。
+     いちばん きびしいのは そこで、余裕は **49px しか ない**。
+     いまは 1行・約32px。文を 足したく なったら、まず そこを 測りなおす こと。 */
+  #overlay p.rainbowMsg {
+    font-size: 11.5px; color: #9B2F62; margin: 4px 0 2px;
+    background: #fff4fa; border: 1px solid transparent;
+    border-radius: 999px; padding: 4px 10px; line-height: 1.4;
+    background-image:
+      linear-gradient(#fff4fa, #fff4fa),
+      linear-gradient(90deg,#ffc7da,#ffdfb4,#d8edb9,#bfe0f5,#dccdf2,#ffc7da);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
   }
 
   /* 1回 遊んだ あとだけ 出る ひとこと。えらび画面を 最初に 出さない かわり。 */
@@ -676,6 +700,12 @@
       <p class="myrec" id="myRec"></p>
       <div class="dex" id="themeDex"></div>
       <div id="chain"><canvas id="chainCv"></canvas></div>
+      <!-- **にじいろ中だと 分かるのは ここだけ。**（2026-09-22）
+           しりとりの 並びは えらび直すまで ずっと のこる ので、
+           気づかない まま 遊ぶと **記録が 1つも 残らない**。
+           入口（えらび画面の ファンファーレ）は 派手なのに 出口が 無言だった。
+           「始める」の すぐ上に 置く ── 押す 直前に かならず 目を 通る ところ。 -->
+      <p class="rainbowMsg wide hidden" id="rainbowMsg"></p>
       <button class="btn" id="startBtn">始める</button>
       <p class="hintMsg wide hidden" id="hintMsg"></p>
       <button class="link" id="codeBtn">記録を保存・読み込み</button>
@@ -6064,6 +6094,11 @@ function hideCharSelect(){
   if (selectedTiers && selectedTiers.length === 6) applySelectedTiers();
   try { paintLastName(); } catch(e){}
   try { fitCanvas(); initTitleArt(); initChainBar(); renderLadder(); } catch(e){}
+  /* **タイトルの 中身を そとから 変えたら `titlePaint()` を よぶ こと。**
+     ここを 呼んで いなかった ため、えらび直して しりとりを 解いても
+     **「🌈 にじいろ中」の 行が 消えなかった**（2026-09-22）。
+     `loadFromCode()` で 同じ ことを やった 前例が ある（最高点が 画面に 出なかった）。 */
+  try { if (titlePaint) titlePaint(); } catch(e){}
 }
 
 /* タイトルの 文の 中の「いちばん ちいさい子」を、じっさいに えらばれた
@@ -6177,6 +6212,19 @@ function bindTitleButtons(){
     // 1回でも 遊んで いて、まだ じぶんで えらんだ ことが ない人にだけ 出す
     const hint = document.getElementById("pickHint");
     if (hint) hint.classList.toggle("hidden", !(plays >= 1 && !customChars));
+    /* **にじいろ中の 知らせ。**（2026-09-22）
+       にじいろは 1ゲーム限りでは なく、**しりとりの 並びで いる あいだ ずっと**
+       つづく（`start()` が 毎回 `isShiritori(selectedTiers)` で 見なおす）。
+       そのあいだ 記録は 1つも 残らない のに、遊んで いる 最中に それが 分かる
+       表示が どこにも なかった。**順番が 効いて いる ことを 知らないと、
+       同じ6体を えらび直しても 戻れない** ので、戻り方まで ここで 言う。 */
+    const rb = document.getElementById("rainbowMsg");
+    if (rb){
+      const on = isShiritori(selectedTiers);
+      rb.classList.toggle("hidden", !on);
+      if (on) rb.textContent =
+        "🌈 にじいろ中・記録は残りません（選びなおすと戻る）";
+    }
     // まだ 出して いない ヒントが あれば、ここで はじめて「出した」ことに する
     const hm = document.getElementById("hintMsg");
     if (pendingHint && hm){
