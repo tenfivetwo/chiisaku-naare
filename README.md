@@ -1,4 +1,4 @@
-# まめまる 〜くっつくと ちいさくなる〜
+# まめまる
 
 **▶ 遊ぶ： https://tenfivetwo.github.io/chiisaku-naare/**
 
